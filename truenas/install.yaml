@@ -1,0 +1,231 @@
+# Wingman Game Server Manager - TrueNAS SCALE Installation
+# This file can be used to install Wingman directly via YAML
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wingman
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wingman-secrets
+  namespace: wingman
+type: Opaque
+stringData:
+  # Replace these with your actual credentials
+  cf-api-token: "YOUR_CLOUDFLARE_API_TOKEN"
+  npm-password: "YOUR_NPM_PASSWORD"
+  unifi-password: "YOUR_UNIFI_PASSWORD"
+  ptero-api-key: "YOUR_PTERODACTYL_API_KEY"
+  flask-secret-key: "CHANGE_THIS_TO_RANDOM_SECRET_KEY"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wingman-data
+  namespace: wingman
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wingman-logs
+  namespace: wingman
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wingman-templates
+  namespace: wingman
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wingman
+  namespace: wingman
+  labels:
+    app: wingman
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: wingman
+  template:
+    metadata:
+      labels:
+        app: wingman
+    spec:
+      containers:
+      - name: wingman
+        image: ghcr.io/your-username/wingman:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 5000
+          protocol: TCP
+        env:
+        # Domain Configuration
+        - name: DOMAIN
+          value: "treestandk.com"
+
+        # Cloudflare Configuration
+        - name: CF_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: cf-api-token
+        - name: CF_ZONE_ID
+          value: "YOUR_CLOUDFLARE_ZONE_ID"
+
+        # Nginx Proxy Manager Configuration
+        - name: NPM_API_URL
+          value: "http://192.168.1.100:81/api"
+        - name: NPM_EMAIL
+          value: "admin@example.com"
+        - name: NPM_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: npm-password
+
+        # UniFi Configuration
+        - name: UNIFI_URL
+          value: "https://192.168.1.1"
+        - name: UNIFI_USER
+          value: "admin"
+        - name: UNIFI_PASS
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: unifi-password
+        - name: UNIFI_SITE
+          value: "default"
+        - name: UNIFI_IS_UDM
+          value: "false"
+
+        # Pterodactyl Configuration
+        - name: PTERO_URL
+          value: "https://panel.yourdomain.com"
+        - name: PTERO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: ptero-api-key
+
+        # Network Configuration
+        - name: PUBLIC_IP
+          value: ""
+
+        # Feature Flags
+        - name: ENABLE_AUTO_UNIFI
+          value: "true"
+        - name: ENABLE_SSL_AUTO
+          value: "true"
+        - name: ENABLE_MONITORING
+          value: "false"
+
+        # Application Settings
+        - name: FLASK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: flask-secret-key
+
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: logs
+          mountPath: /app/logs
+        - name: templates
+          mountPath: /app/templates/saved
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 1000m
+          requests:
+            memory: 256Mi
+            cpu: 500m
+
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_RAW
+
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: wingman-data
+      - name: logs
+        persistentVolumeClaim:
+          claimName: wingman-logs
+      - name: templates
+        persistentVolumeClaim:
+          claimName: wingman-templates
+
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wingman
+  namespace: wingman
+  labels:
+    app: wingman
+spec:
+  type: NodePort
+  ports:
+  - port: 5000
+    targetPort: http
+    protocol: TCP
+    name: http
+    nodePort: 30500
+  selector:
+    app: wingman

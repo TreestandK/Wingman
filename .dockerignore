@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Documentation
+README.md
+README-DOCKER.md
+*.md
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.example
+
+# Data
+data/
+
+# Original script
+gameserver-deploy.sh
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo

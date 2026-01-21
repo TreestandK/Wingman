@@ -1,0 +1,109 @@
+name: wingman
+version: 2.0.0
+app_version: 2.0.0
+categories:
+  - gaming
+  - management
+  - automation
+description: |
+  Wingman Game Server Manager - Automated game server deployment and management system.
+
+  Features:
+  - Web-based GUI for game server deployment
+  - Automatic Cloudflare DNS configuration
+  - UniFi port forwarding automation
+  - Nginx Proxy Manager integration
+  - Pterodactyl panel support
+  - Template system for common configurations
+  - Real-time deployment monitoring
+  - One-click rollback functionality
+
+  Supports: Minecraft, Valheim, Terraria, Palworld, Rust, ARK, and more.
+
+icon: https://raw.githubusercontent.com/your-repo/wingman/main/icon.png
+home: https://treestandk.com
+sources:
+  - https://github.com/your-repo/wingman
+
+maintainers:
+  - name: treestandk.com
+    email: admin@treestandk.com
+
+keywords:
+  - game-server
+  - automation
+  - deployment
+  - minecraft
+  - pterodactyl
+  - cloudflare
+  - nginx
+
+capabilities:
+  - NET_ADMIN
+  - NET_RAW
+
+host_network: false
+privileged: false
+
+# Docker image configuration
+image:
+  repository: ghcr.io/your-username/wingman
+  tag: latest
+  pullPolicy: Always
+
+# Service configuration
+service:
+  type: NodePort
+  port: 5000
+  nodePort: 30500
+
+# Persistent storage
+persistence:
+  data:
+    enabled: true
+    type: pvc
+    size: 1Gi
+    mountPath: /app/data
+  logs:
+    enabled: true
+    type: pvc
+    size: 2Gi
+    mountPath: /app/logs
+  templates:
+    enabled: true
+    type: pvc
+    size: 512Mi
+    mountPath: /app/templates/saved
+
+# Resource limits
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 1000m
+  requests:
+    memory: 256Mi
+    cpu: 500m
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+
+# Auto-update configuration
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1

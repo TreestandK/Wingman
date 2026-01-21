@@ -1,0 +1,322 @@
+groups:
+  - name: "Configuration"
+    description: "Application Configuration"
+  - name: "Networking"
+    description: "Network Configuration"
+  - name: "Storage"
+    description: "Storage Configuration"
+  - name: "Resources"
+    description: "Resource Limits"
+  - name: "Credentials"
+    description: "API Credentials and Secrets"
+
+questions:
+  # Basic Configuration
+  - variable: config.domain
+    label: "Domain Name"
+    description: "Your base domain (e.g., treestandk.com)"
+    group: "Configuration"
+    schema:
+      type: string
+      default: "treestandk.com"
+      required: true
+
+  # Cloudflare Configuration
+  - variable: secrets.cfApiToken
+    label: "Cloudflare API Token"
+    description: "Your Cloudflare API token for DNS management"
+    group: "Credentials"
+    schema:
+      type: string
+      private: true
+      default: ""
+
+  - variable: config.cloudflare.zoneId
+    label: "Cloudflare Zone ID"
+    description: "Your Cloudflare Zone ID"
+    group: "Configuration"
+    schema:
+      type: string
+      default: ""
+
+  # Nginx Proxy Manager Configuration
+  - variable: config.npm.apiUrl
+    label: "NPM API URL"
+    description: "Nginx Proxy Manager API URL (e.g., http://192.168.1.100:81/api)"
+    group: "Configuration"
+    schema:
+      type: string
+      default: ""
+
+  - variable: config.npm.email
+    label: "NPM Email"
+    description: "Nginx Proxy Manager admin email"
+    group: "Configuration"
+    schema:
+      type: string
+      default: "admin@example.com"
+
+  - variable: secrets.npmPassword
+    label: "NPM Password"
+    description: "Nginx Proxy Manager admin password"
+    group: "Credentials"
+    schema:
+      type: string
+      private: true
+      default: ""
+
+  # UniFi Configuration
+  - variable: config.unifi.url
+    label: "UniFi Controller URL"
+    description: "UniFi Controller URL (e.g., https://192.168.1.1)"
+    group: "Configuration"
+    schema:
+      type: string
+      default: ""
+
+  - variable: config.unifi.user
+    label: "UniFi Username"
+    description: "UniFi Controller admin username"
+    group: "Configuration"
+    schema:
+      type: string
+      default: "admin"
+
+  - variable: secrets.unifiPassword
+    label: "UniFi Password"
+    description: "UniFi Controller admin password"
+    group: "Credentials"
+    schema:
+      type: string
+      private: true
+      default: ""
+
+  - variable: config.unifi.site
+    label: "UniFi Site Name"
+    description: "UniFi site name (usually 'default')"
+    group: "Configuration"
+    schema:
+      type: string
+      default: "default"
+
+  - variable: config.unifi.isUdm
+    label: "UniFi Dream Machine"
+    description: "Is this a UDM/UCG device?"
+    group: "Configuration"
+    schema:
+      type: boolean
+      default: false
+
+  # Pterodactyl Configuration
+  - variable: config.pterodactyl.url
+    label: "Pterodactyl Panel URL"
+    description: "Pterodactyl panel URL (e.g., https://panel.yourdomain.com)"
+    group: "Configuration"
+    schema:
+      type: string
+      default: ""
+
+  - variable: secrets.pteroApiKey
+    label: "Pterodactyl API Key"
+    description: "Pterodactyl application API key"
+    group: "Credentials"
+    schema:
+      type: string
+      private: true
+      default: ""
+
+  # Network Configuration
+  - variable: config.publicIp
+    label: "Public IP Address"
+    description: "Your public IP (leave empty for auto-detection)"
+    group: "Networking"
+    schema:
+      type: string
+      default: ""
+
+  - variable: service.type
+    label: "Service Type"
+    description: "Kubernetes service type"
+    group: "Networking"
+    schema:
+      type: string
+      default: "NodePort"
+      enum:
+        - value: "NodePort"
+          description: "NodePort - External access via node port"
+        - value: "ClusterIP"
+          description: "ClusterIP - Internal access only"
+        - value: "LoadBalancer"
+          description: "LoadBalancer - External load balancer"
+
+  - variable: service.nodePort
+    label: "Node Port"
+    description: "Port to expose on the node (30000-32767)"
+    group: "Networking"
+    schema:
+      type: int
+      default: 30500
+      min: 30000
+      max: 32767
+      show_if: [["service.type", "=", "NodePort"]]
+
+  # Feature Flags
+  - variable: config.features.enableAutoUnifi
+    label: "Enable UniFi Automation"
+    description: "Automatically configure UniFi port forwarding"
+    group: "Configuration"
+    schema:
+      type: boolean
+      default: true
+
+  - variable: config.features.enableSslAuto
+    label: "Enable Automatic SSL"
+    description: "Automatically request SSL certificates via NPM"
+    group: "Configuration"
+    schema:
+      type: boolean
+      default: true
+
+  - variable: config.features.enableMonitoring
+    label: "Enable Monitoring"
+    description: "Enable advanced monitoring features"
+    group: "Configuration"
+    schema:
+      type: boolean
+      default: false
+
+  # Storage Configuration
+  - variable: persistence.data.enabled
+    label: "Enable Data Persistence"
+    description: "Enable persistent storage for deployment data"
+    group: "Storage"
+    schema:
+      type: boolean
+      default: true
+
+  - variable: persistence.data.size
+    label: "Data Storage Size"
+    description: "Size of data storage volume"
+    group: "Storage"
+    schema:
+      type: string
+      default: "1Gi"
+      show_if: [["persistence.data.enabled", "=", true]]
+
+  - variable: persistence.data.storageClass
+    label: "Data Storage Class"
+    description: "Storage class for data volume (leave empty for default)"
+    group: "Storage"
+    schema:
+      type: string
+      default: ""
+      show_if: [["persistence.data.enabled", "=", true]]
+
+  - variable: persistence.logs.enabled
+    label: "Enable Logs Persistence"
+    description: "Enable persistent storage for logs"
+    group: "Storage"
+    schema:
+      type: boolean
+      default: true
+
+  - variable: persistence.logs.size
+    label: "Logs Storage Size"
+    description: "Size of logs storage volume"
+    group: "Storage"
+    schema:
+      type: string
+      default: "2Gi"
+      show_if: [["persistence.logs.enabled", "=", true]]
+
+  - variable: persistence.templates.enabled
+    label: "Enable Templates Persistence"
+    description: "Enable persistent storage for templates"
+    group: "Storage"
+    schema:
+      type: boolean
+      default: true
+
+  - variable: persistence.templates.size
+    label: "Templates Storage Size"
+    description: "Size of templates storage volume"
+    group: "Storage"
+    schema:
+      type: string
+      default: "512Mi"
+      show_if: [["persistence.templates.enabled", "=", true]]
+
+  # Docker Image Configuration
+  - variable: image.repository
+    label: "Image Repository"
+    description: "Docker image repository"
+    group: "Configuration"
+    schema:
+      type: string
+      default: "ghcr.io/your-username/wingman"
+
+  - variable: image.tag
+    label: "Image Tag"
+    description: "Docker image tag"
+    group: "Configuration"
+    schema:
+      type: string
+      default: "latest"
+
+  - variable: image.pullPolicy
+    label: "Image Pull Policy"
+    description: "When to pull the Docker image"
+    group: "Configuration"
+    schema:
+      type: string
+      default: "Always"
+      enum:
+        - value: "Always"
+          description: "Always pull the image"
+        - value: "IfNotPresent"
+          description: "Pull if not present"
+        - value: "Never"
+          description: "Never pull"
+
+  # Resource Limits
+  - variable: resources.limits.memory
+    label: "Memory Limit"
+    description: "Maximum memory allocation"
+    group: "Resources"
+    schema:
+      type: string
+      default: "512Mi"
+
+  - variable: resources.limits.cpu
+    label: "CPU Limit"
+    description: "Maximum CPU allocation (in millicores)"
+    group: "Resources"
+    schema:
+      type: string
+      default: "1000m"
+
+  - variable: resources.requests.memory
+    label: "Memory Request"
+    description: "Minimum memory allocation"
+    group: "Resources"
+    schema:
+      type: string
+      default: "256Mi"
+
+  - variable: resources.requests.cpu
+    label: "CPU Request"
+    description: "Minimum CPU allocation (in millicores)"
+    group: "Resources"
+    schema:
+      type: string
+      default: "500m"
+
+  # Application Secrets
+  - variable: secrets.flaskSecretKey
+    label: "Flask Secret Key"
+    description: "Secret key for Flask sessions (auto-generated if empty)"
+    group: "Credentials"
+    schema:
+      type: string
+      private: true
+      default: ""

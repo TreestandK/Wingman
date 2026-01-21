@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wingman - Game Server Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-gamepad"></i> Wingman Game Server Manager</h1>
+                <p class="subtitle">Automated Game Server Deployment & Management</p>
+            </div>
+            <div class="header-status">
+                <span class="status-indicator" id="status-indicator">
+                    <i class="fas fa-circle"></i> System Ready
+                </span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-button active" data-tab="deploy">
+                <i class="fas fa-rocket"></i> Deploy Server
+            </button>
+            <button class="tab-button" data-tab="deployments">
+                <i class="fas fa-server"></i> Deployments
+            </button>
+            <button class="tab-button" data-tab="templates">
+                <i class="fas fa-file-code"></i> Templates
+            </button>
+            <button class="tab-button" data-tab="monitoring">
+                <i class="fas fa-chart-line"></i> Monitoring
+            </button>
+            <button class="tab-button" data-tab="settings">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="content">
+            <!-- Deploy Tab -->
+            <div class="tab-content active" id="deploy-tab">
+                <div class="panel">
+                    <h2><i class="fas fa-rocket"></i> Deploy New Game Server</h2>
+
+                    <form id="deploy-form">
+                        <!-- Basic Configuration -->
+                        <div class="form-section">
+                            <h3>Basic Configuration</h3>
+
+                            <div class="form-group">
+                                <label for="subdomain">
+                                    <i class="fas fa-globe"></i> Subdomain
+                                </label>
+                                <input type="text" id="subdomain" name="subdomain"
+                                       placeholder="minecraft" pattern="[a-zA-Z0-9-]+" required>
+                                <small>Alphanumeric characters and hyphens only</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="server-ip">
+                                    <i class="fas fa-network-wired"></i> Server IP Address
+                                </label>
+                                <input type="text" id="server-ip" name="server_ip"
+                                       placeholder="192.168.1.100"
+                                       pattern="^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="game-type">
+                                    <i class="fas fa-gamepad"></i> Game Type
+                                </label>
+                                <select id="game-type" name="game_type" required>
+                                    <option value="">Select game type...</option>
+                                    <option value="minecraft_java">Minecraft (Java)</option>
+                                    <option value="minecraft_bedrock">Minecraft (Bedrock)</option>
+                                    <option value="valheim">Valheim</option>
+                                    <option value="terraria">Terraria</option>
+                                    <option value="palworld">Palworld</option>
+                                    <option value="rust">Rust</option>
+                                    <option value="ark">ARK: Survival Evolved</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="game-port">
+                                    <i class="fas fa-plug"></i> Primary Port
+                                </label>
+                                <input type="number" id="game-port" name="game_port"
+                                       placeholder="25565" min="1" max="65535" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="additional-ports">
+                                    <i class="fas fa-ethernet"></i> Additional Ports
+                                </label>
+                                <input type="text" id="additional-ports" name="additional_ports"
+                                       placeholder="25575, 25576 (comma-separated)">
+                                <small>Optional additional ports to forward</small>
+                            </div>
+                        </div>
+
+                        <!-- Resource Allocation -->
+                        <div class="form-section">
+                            <h3>Resource Allocation</h3>
+
+                            <div class="form-group">
+                                <label for="memory">
+                                    <i class="fas fa-memory"></i> Memory (MB)
+                                </label>
+                                <input type="number" id="memory" name="memory"
+                                       placeholder="4096" min="512" step="256" value="4096">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="disk">
+                                    <i class="fas fa-hdd"></i> Disk Space (MB)
+                                </label>
+                                <input type="number" id="disk" name="disk"
+                                       placeholder="10240" min="1024" step="1024" value="10240">
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options -->
+                        <div class="form-section collapsible">
+                            <h3 onclick="toggleSection(this)">
+                                <i class="fas fa-chevron-right"></i> Advanced Options
+                            </h3>
+                            <div class="collapsible-content">
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enable-ssl" name="enable_ssl" checked>
+                                        <i class="fas fa-lock"></i> Enable SSL/TLS
+                                    </label>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enable-monitoring" name="enable_monitoring">
+                                        <i class="fas fa-chart-bar"></i> Enable Monitoring
+                                    </label>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="protocol">
+                                        <i class="fas fa-project-diagram"></i> Protocol
+                                    </label>
+                                    <select id="protocol" name="protocol">
+                                        <option value="tcp_udp">TCP + UDP (Both)</option>
+                                        <option value="tcp">TCP Only</option>
+                                        <option value="udp">UDP Only</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Template Options -->
+                        <div class="form-section">
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="save-template" name="save_template">
+                                    <i class="fas fa-save"></i> Save as Template
+                                </label>
+                            </div>
+
+                            <div class="form-group" id="template-name-group" style="display: none;">
+                                <label for="template-name">Template Name</label>
+                                <input type="text" id="template-name" name="template_name"
+                                       placeholder="my-minecraft-server">
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="testConnectivity()">
+                                <i class="fas fa-plug-circle-check"></i> Test Connectivity
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-rocket"></i> Deploy Server
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Deployment Progress -->
+                    <div id="deployment-progress" class="deployment-progress" style="display: none;">
+                        <h3>Deployment in Progress</h3>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div id="deployment-steps"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deployments Tab -->
+            <div class="tab-content" id="deployments-tab">
+                <div class="panel">
+                    <h2><i class="fas fa-server"></i> Active Deployments</h2>
+                    <div id="deployments-list">
+                        <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Templates Tab -->
+            <div class="tab-content" id="templates-tab">
+                <div class="panel">
+                    <h2><i class="fas fa-file-code"></i> Deployment Templates</h2>
+                    <div id="templates-list">
+                        <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monitoring Tab -->
+            <div class="tab-content" id="monitoring-tab">
+                <div class="panel">
+                    <h2><i class="fas fa-chart-line"></i> System Monitoring</h2>
+                    <div class="stats-grid" id="stats-grid">
+                        <div class="stat-card">
+                            <i class="fas fa-server"></i>
+                            <h3>Total Deployments</h3>
+                            <p class="stat-value" id="stat-total">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>Active Servers</h3>
+                            <p class="stat-value" id="stat-active">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Failed Deployments</h3>
+                            <p class="stat-value" id="stat-failed">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-clock"></i>
+                            <h3>Avg. Deploy Time</h3>
+                            <p class="stat-value" id="stat-avg-time">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings-tab">
+                <div class="panel">
+                    <h2><i class="fas fa-cog"></i> System Settings</h2>
+                    <p class="info-message">
+                        <i class="fas fa-info-circle"></i>
+                        Configuration is managed through environment variables in Docker Compose.
+                        Restart the container after making changes.
+                    </p>
+
+                    <div class="settings-info">
+                        <h3>Current Configuration</h3>
+                        <button class="btn btn-secondary" onclick="validateConfig()">
+                            <i class="fas fa-check-circle"></i> Validate Configuration
+                        </button>
+                        <button class="btn btn-secondary" onclick="testAllAPIs()">
+                            <i class="fas fa-plug-circle-check"></i> Test All APIs
+                        </button>
+                    </div>
+
+                    <div id="config-status" class="config-status"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Wingman Game Server Manager v2.0 | &copy; 2024 treestandk.com</p>
+        </footer>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

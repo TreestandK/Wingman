@@ -1,0 +1,167 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wingman
+  labels:
+    app: wingman
+    app.kubernetes.io/name: wingman
+    app.kubernetes.io/version: "2.0.0"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: wingman
+  template:
+    metadata:
+      labels:
+        app: wingman
+    spec:
+      containers:
+      - name: wingman
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 5000
+          protocol: TCP
+        env:
+        # Domain Configuration
+        - name: DOMAIN
+          value: "{{ .Values.config.domain }}"
+
+        # Cloudflare Configuration
+        - name: CF_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: cf-api-token
+              optional: true
+        - name: CF_ZONE_ID
+          value: "{{ .Values.config.cloudflare.zoneId }}"
+
+        # Nginx Proxy Manager Configuration
+        - name: NPM_API_URL
+          value: "{{ .Values.config.npm.apiUrl }}"
+        - name: NPM_EMAIL
+          value: "{{ .Values.config.npm.email }}"
+        - name: NPM_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: npm-password
+              optional: true
+
+        # UniFi Configuration
+        - name: UNIFI_URL
+          value: "{{ .Values.config.unifi.url }}"
+        - name: UNIFI_USER
+          value: "{{ .Values.config.unifi.user }}"
+        - name: UNIFI_PASS
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: unifi-password
+              optional: true
+        - name: UNIFI_SITE
+          value: "{{ .Values.config.unifi.site }}"
+        - name: UNIFI_IS_UDM
+          value: "{{ .Values.config.unifi.isUdm }}"
+
+        # Pterodactyl Configuration
+        - name: PTERO_URL
+          value: "{{ .Values.config.pterodactyl.url }}"
+        - name: PTERO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: ptero-api-key
+              optional: true
+
+        # Network Configuration
+        - name: PUBLIC_IP
+          value: "{{ .Values.config.publicIp }}"
+
+        # Feature Flags
+        - name: ENABLE_AUTO_UNIFI
+          value: "{{ .Values.config.features.enableAutoUnifi }}"
+        - name: ENABLE_SSL_AUTO
+          value: "{{ .Values.config.features.enableSslAuto }}"
+        - name: ENABLE_MONITORING
+          value: "{{ .Values.config.features.enableMonitoring }}"
+
+        # Application Settings
+        - name: FLASK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: wingman-secrets
+              key: flask-secret-key
+
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: logs
+          mountPath: /app/logs
+        - name: templates
+          mountPath: /app/templates/saved
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_RAW
+
+      volumes:
+      - name: data
+        {{- if .Values.persistence.data.enabled }}
+        persistentVolumeClaim:
+          claimName: wingman-data
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      - name: logs
+        {{- if .Values.persistence.logs.enabled }}
+        persistentVolumeClaim:
+          claimName: wingman-logs
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      - name: templates
+        {{- if .Values.persistence.templates.enabled }}
+        persistentVolumeClaim:
+          claimName: wingman-templates
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

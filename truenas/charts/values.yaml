@@ -1,0 +1,101 @@
+# Default values for Wingman Game Server Manager
+# This is a YAML-formatted file.
+
+# Docker image configuration
+image:
+  repository: ghcr.io/your-username/wingman
+  tag: latest
+  pullPolicy: Always
+
+# Service configuration
+service:
+  type: NodePort
+  port: 5000
+  nodePort: 30500
+
+# Application configuration
+config:
+  domain: "treestandk.com"
+
+  cloudflare:
+    zoneId: ""
+
+  npm:
+    apiUrl: ""
+    email: "admin@example.com"
+
+  unifi:
+    url: ""
+    user: "admin"
+    site: "default"
+    isUdm: "false"
+
+  pterodactyl:
+    url: ""
+
+  publicIp: ""
+
+  features:
+    enableAutoUnifi: "true"
+    enableSslAuto: "true"
+    enableMonitoring: "false"
+
+# Secrets (stored in Kubernetes secret)
+secrets:
+  cfApiToken: ""
+  npmPassword: ""
+  unifiPassword: ""
+  pteroApiKey: ""
+  flaskSecretKey: ""
+
+# Persistent storage
+persistence:
+  data:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  logs:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+  templates:
+    enabled: true
+    size: 512Mi
+    storageClass: ""
+
+# Resource limits
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 1000m
+  requests:
+    memory: 256Mi
+    cpu: 500m
+
+# Health checks
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Update strategy
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# Security context
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  allowPrivilegeEscalation: false

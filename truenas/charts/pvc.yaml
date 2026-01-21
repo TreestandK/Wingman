@@ -1,0 +1,55 @@
+{{- if .Values.persistence.data.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wingman-data
+  labels:
+    app: wingman
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.data.size }}
+  {{- if .Values.persistence.data.storageClass }}
+  storageClassName: {{ .Values.persistence.data.storageClass }}
+  {{- end }}
+---
+{{- end }}
+
+{{- if .Values.persistence.logs.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wingman-logs
+  labels:
+    app: wingman
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.logs.size }}
+  {{- if .Values.persistence.logs.storageClass }}
+  storageClassName: {{ .Values.persistence.logs.storageClass }}
+  {{- end }}
+---
+{{- end }}
+
+{{- if .Values.persistence.templates.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wingman-templates
+  labels:
+    app: wingman
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.templates.size }}
+  {{- if .Values.persistence.templates.storageClass }}
+  storageClassName: {{ .Values.persistence.templates.storageClass }}
+  {{- end }}
+{{- end }}

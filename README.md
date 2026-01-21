@@ -1,480 +1,466 @@
-# Complete Deployment Example - Start to Finish
+# 🎮 Wingman - Game Server Manager
 
-This guide shows a real-world deployment from scratch, including what you'll see and what to expect.
+**Automated game server deployment and management system with a beautiful web interface.**
 
-## Scenario
+Transform your game server infrastructure management from command-line scripts to a modern, web-based automation platform with real-time monitoring, one-click deployments, and automatic rollback capabilities.
 
-**Goal:** Deploy a Minecraft Java server accessible at `minecraft.treestandk.com:25565`
-
-**Infrastructure:**
-- Game server VM: 192.168.1.50
-- TrueNAS with NPM: 192.168.1.100
-- UniFi Controller: 192.168.1.1
-- Pterodactyl Panel: https://panel.treestandk.com
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![TrueNAS](https://img.shields.io/badge/TrueNAS-SCALE-green)
+![Docker](https://img.shields.io/badge/docker-compose-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
-## Step 1: First-Time Setup (One Time Only)
+## ✨ Features
+
+### 🖥️ Modern Web Interface
+- Beautiful, responsive dark-themed UI
+- Real-time deployment progress tracking
+- Interactive deployment dashboard
+- Mobile-friendly design
+
+### 🚀 Automated Deployments
+- One-click game server deployments
+- Automatic Cloudflare DNS configuration
+- UniFi port forwarding automation
+- Nginx Proxy Manager integration
+- Pterodactyl panel support
+
+### 📋 Template Management
+- Save server configurations as templates
+- Quick deployment from saved templates
+- Share templates across your team
+- Pre-configured templates for popular games
+
+### 📊 Monitoring & Management
+- Real-time deployment monitoring
+- Detailed deployment logs
+- One-click rollback functionality
+- System statistics dashboard
+- API connectivity testing
+
+### 🔧 Infrastructure Integration
+- **Cloudflare** - Automatic DNS management
+- **UniFi** - Port forwarding automation
+- **Nginx Proxy Manager** - Reverse proxy setup
+- **Pterodactyl** - Game panel integration
+- **Let's Encrypt** - Automatic SSL certificates
+
+---
+
+## 🎮 Supported Games
+
+Pre-configured templates included for:
+
+- **Minecraft** (Java & Bedrock)
+- **Valheim**
+- **Terraria**
+- **Palworld**
+- **Rust**
+- **ARK: Survival Evolved**
+- **Custom games** - Configure any game server
+
+---
+
+## 🚀 Quick Start
+
+### For TrueNAS SCALE Users
 
 ```bash
-# Download and setup script
-cd ~
-wget https://your-repo/gameserver-deploy.sh
-chmod +x gameserver-deploy.sh
+# 1. Download install.yaml
+wget https://github.com/your-repo/wingman/raw/main/truenas/install.yaml
 
-# Initialize configuration
-./gameserver-deploy.sh --init
+# 2. Edit credentials
+nano install.yaml
+
+# 3. Deploy
+kubectl apply -f install.yaml
+
+# 4. Access
+# http://your-truenas-ip:30500
 ```
 
-**Output:**
-```
-Created default configuration file at: /home/user/.gameserver-deploy/config.env
-Please edit this file with your credentials before running the script.
+**📖 See [QUICKSTART.md](QUICKSTART.md) for detailed 5-minute setup guide**
+
+### For Docker Compose Users
+
+```bash
+# 1. Clone repository
+git clone https://github.com/your-repo/wingman.git
+cd wingman
+
+# 2. Configure
+cp .env.example .env
+nano .env
+
+# 3. Start
+docker-compose up -d
+
+# 4. Access
+# http://localhost:5000
 ```
 
 ---
 
-## Step 2: Configure Credentials
+## 📚 Documentation
 
-```bash
-nano ~/.gameserver-deploy/config.env
+### Getting Started
+- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 5 minutes ⚡
+- **[README-DOCKER.md](README-DOCKER.md)** - Docker Compose deployment guide
+- **[TRUENAS-INSTALL.md](TRUENAS-INSTALL.md)** - Complete TrueNAS SCALE guide
+
+### Advanced
+- **[BUILD-AND-PUBLISH.md](BUILD-AND-PUBLISH.md)** - Build and publish custom images
+- **[truenas/README.md](truenas/README.md)** - TrueNAS deployment files reference
+
+### API Reference
+- **[API.md](API.md)** - REST API documentation *(coming soon)*
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│           Web Browser (Port 5000/30500)         │
+└────────────────────┬────────────────────────────┘
+                     │
+                     ↓
+┌─────────────────────────────────────────────────┐
+│              Flask Web Application              │
+│  • REST API                                     │
+│  • Real-time monitoring                         │
+│  • Template management                          │
+└────────────────────┬────────────────────────────┘
+                     │
+                     ↓
+┌─────────────────────────────────────────────────┐
+│           Deployment Manager (Python)           │
+│  • Orchestrates all operations                 │
+│  • State management                             │
+│  • Rollback handling                            │
+└──────┬──────┬──────┬──────┬─────────────────────┘
+       │      │      │      │
+       ↓      ↓      ↓      ↓
+    ┌────┐ ┌────┐ ┌──────┐ ┌────────────┐
+    │ CF │ │NPM │ │UniFi │ │Pterodactyl │
+    └────┘ └────┘ └──────┘ └────────────┘
 ```
 
-**Edit the file:**
+---
+
+## 📦 Installation Options
+
+### Option 1: TrueNAS SCALE (Recommended for Production)
+
+**Kubernetes-based deployment with:**
+- Automatic updates
+- Health monitoring
+- Persistent storage
+- Web GUI configuration
+- High availability support
+
+**Installation:** See [TRUENAS-INSTALL.md](TRUENAS-INSTALL.md)
+
+### Option 2: Docker Compose (Recommended for Testing)
+
+**Container-based deployment with:**
+- Quick setup
+- Easy configuration
+- Local development
+- Volume persistence
+
+**Installation:** See [README-DOCKER.md](README-DOCKER.md)
+
+### Option 3: Manual Installation
+
+Deploy individual components manually for custom setups.
+
+---
+
+## ⚙️ Configuration
+
+### Required Services
+
+1. **Cloudflare** (DNS Management)
+   - API Token with Zone.DNS edit permissions
+   - Zone ID for your domain
+
+2. **Nginx Proxy Manager** (Reverse Proxy)
+   - API access credentials
+   - Accessible API endpoint
+
+3. **UniFi Controller** (Port Forwarding) - Optional
+   - Admin credentials
+   - Controller URL
+
+4. **Pterodactyl Panel** (Game Hosting) - Optional
+   - Application API key
+   - Panel URL
+
+### Environment Variables
+
 ```bash
-DOMAIN="yourdomain.com"
+# Domain
+DOMAIN=yourdomain.com
 
 # Cloudflare
-CF_API_TOKEN="your_actual_token_here"
-CF_ZONE_ID="your_zone_id_here"
+CF_API_TOKEN=your_token
+CF_ZONE_ID=your_zone_id
 
-# NPM
-NPM_API_URL="http://npm_ip:81/api"
-NPM_EMAIL="admin@treestandk.com"
-NPM_PASSWORD="your_npm_password"
+# Nginx Proxy Manager
+NPM_API_URL=http://npm:81/api
+NPM_EMAIL=admin@example.com
+NPM_PASSWORD=password
 
 # UniFi
-UNIFI_URL="https://unifi_ip"
-UNIFI_USER="admin"
-UNIFI_PASS="your_unifi_password"
-UNIFI_SITE="default"
-UNIFI_IS_UDM="false"
+UNIFI_URL=https://unifi
+UNIFI_USER=admin
+UNIFI_PASS=password
 
 # Pterodactyl
-PTERO_URL="https://YOUR_PANEL.com"
-PTERO_API_KEY="ptla_your_api_key_here"
-
-# Features
-ENABLE_AUTO_UNIFI="true"
-ENABLE_SSL_AUTO="true"
+PTERO_URL=https://panel.yourdomain.com
+PTERO_API_KEY=your_api_key
 ```
 
-Save and exit (Ctrl+X, Y, Enter)
+**📖 See [.env.example](.env.example) for complete list**
 
 ---
 
-## Step 3: Validate Configuration
+## 🔄 Automatic Updates
+
+### TrueNAS SCALE
+
+Enable automatic updates with GitHub Actions:
+
+```yaml
+# .github/workflows/build-and-push.yml
+# Automatically builds and publishes on every commit
+```
+
+Schedule updates on TrueNAS:
 
 ```bash
-./gameserver-deploy.sh --validate
+# Daily updates at 3 AM
+0 3 * * * /root/update-script.sh
 ```
 
-**Output:**
-```
-============================================
-PRE-FLIGHT CONFIGURATION VALIDATION
-============================================
-
-✓ DOMAIN: treestandk.com
-✓ Cloudflare credentials configured
-✓ NPM endpoint configured
-✓ Pterodactyl endpoint configured
-
-✓ Configuration validation passed!
-
-============================================
-PRE-FLIGHT API CONNECTIVITY TESTS
-============================================
-
-Testing Cloudflare API...
-✓ Cloudflare API: Connected
-
-Testing NPM API...
-✓ NPM API: Reachable
-
-Testing UniFi Controller...
-✓ UniFi Controller: Reachable
-
-Testing Pterodactyl API...
-✓ Pterodactyl API: Connected
-
-✓ All API connectivity tests passed!
-```
-
----
-
-## Step 4: Deploy Your Server
+### Docker Compose
 
 ```bash
-./gameserver-deploy.sh
+# Pull latest image
+docker-compose pull
+
+# Restart with new image
+docker-compose up -d
 ```
 
-### Interactive Prompts
-
-**Prompt 1: Templates**
-```
-Load from template? (y/n): n
-```
-*(First time, we don't have templates yet)*
-
-**Prompt 2: Subdomain**
-```
-Enter subdomain for the game server (e.g., minecraft, valheim): minecraft
-Full domain will be: minecraft.treestandk.com
-Checking for existing DNS records...
-✓ No DNS conflicts found
-```
-
-**Prompt 3: Server IP**
-```
-Enter the internal IP address of the game server: 192.168.1.50
-```
-
-**Prompt 4: Port**
-```
-Enter the primary game server port (e.g., 25565 for Minecraft): 25565
-```
-
-**Prompt 5: Additional Ports**
-```
-Do you need additional ports forwarded? (y/n): y
-Enter additional port (or press Enter to finish): 25575
-Added port: 25575
-Enter additional port (or press Enter to finish): [Enter]
-```
-
-**Prompt 6: Game Type**
-```
-Common Pterodactyl Eggs:
-1) Minecraft (Java)
-2) Minecraft (Bedrock)
-3) Valheim
-...
-Select egg type (1-8): 1
-```
-
-**Prompt 7: Confirmation**
-```
-============================================
-DEPLOYMENT SUMMARY
-============================================
-Deployment ID: deploy_20260121_143052_12345
-Domain: minecraft.treestandk.com
-Server IP: 192.168.1.50
-Primary Port: 25565
-Additional Ports: 25575
-Egg Type: minecraft_java
-Memory: 4096MB
-Disk: 10240MB
-
-Proceed with deployment? (y/n): y
-```
-
-**Prompt 8: Save Template**
-```
-Save this configuration as a template? (y/n): y
-Enter template name: minecraft-standard
-✓ Template saved as: minecraft-standard
-```
+**📖 See [BUILD-AND-PUBLISH.md](BUILD-AND-PUBLISH.md) for CI/CD setup**
 
 ---
 
-## Step 5: Deployment Progress
+## 🔧 Usage
 
-### Step 1: Cloudflare DNS
+### Deploy a Game Server
+
+1. Navigate to **Deploy Server** tab
+2. Fill in server details:
+   - Subdomain (e.g., `minecraft`)
+   - Server IP address
+   - Game type
+   - Port configuration
+   - Resource allocation
+3. Click **Deploy Server**
+4. Watch real-time deployment progress
+5. Server is ready when deployment completes!
+
+### Create a Template
+
+1. Configure server settings
+2. Check **"Save as Template"**
+3. Name your template
+4. Deploy
+
+Future deployments can use this template for instant configuration!
+
+### Monitor Deployments
+
+- View all deployments in the **Deployments** tab
+- Check logs for any deployment
+- Roll back failed deployments with one click
+- View system statistics in **Monitoring** tab
+
+### Test Configuration
+
+1. Go to **Settings** tab
+2. Click **Test All APIs**
+3. Verify all services are connected
+4. Fix any failing connections
+
+---
+
+## 🛠️ Development
+
+### Prerequisites
+
+- Python 3.11+
+- Docker & Docker Compose
+- Node.js (for frontend development)
+
+### Local Development
+
+```bash
+# Clone repository
+git clone https://github.com/your-repo/wingman.git
+cd wingman
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment
+cp .env.example .env
+nano .env
+
+# Run development server
+python app.py
+
+# Access at http://localhost:5000
 ```
-============================================
-STEP 1: CLOUDFLARE DNS CONFIGURATION
-============================================
 
-Auto-detected public IP: 203.0.113.1
-Creating DNS A record for minecraft.treestandk.com...
-✓ Cloudflare DNS record created successfully!
-  Record ID: abc123def456...
+### Project Structure
+
 ```
-
-### Step 2: UniFi Port Forwarding
-```
-============================================
-STEP 2: UNIFI PORT FORWARDING CONFIGURATION
-============================================
-
-Authenticating with UniFi Controller...
-✓ Authenticated successfully!
-Creating port forward rule for port 25565...
-✓ Port forward rule created for port 25565
-  Rule ID: 507f1f77bcf86cd799439011
-Creating rule for port 25575...
-✓ Rule created for port 25575 (ID: 507f191e810c19729de860ea)
-✓ UniFi port forwarding complete!
-```
-
-### Step 3: Nginx Proxy Manager
-```
-============================================
-STEP 3: NGINX PROXY MANAGER CONFIGURATION
-============================================
-
-Authenticating with Nginx Proxy Manager...
-✓ Authenticated successfully!
-Creating proxy host...
-✓ Nginx proxy host created successfully!
-  Proxy ID: 42
-Requesting Let's Encrypt SSL certificate...
-✓ SSL certificate issued successfully!
-```
-
-### Step 4: Pterodactyl Server
-```
-============================================
-STEP 4: PTERODACTYL SERVER DEPLOYMENT
-============================================
-
-Creating Pterodactyl server...
-Enter Node ID: 1
-Enter actual Egg ID from your panel: 5
-✓ Pterodactyl server created successfully!
-Server UUID: 8a3d2f1e-4b6c-7d8e-9f0a-1b2c3d4e5f6a
+wingman/
+├── app.py                      # Flask web application
+├── deployment_manager.py       # Deployment orchestration
+├── requirements.txt            # Python dependencies
+├── Dockerfile                  # Container image
+├── docker-compose.yml          # Docker Compose config
+├── templates/                  # HTML templates
+│   └── index.html             # Main web interface
+├── static/                     # Static assets
+│   ├── css/
+│   │   └── style.css          # Stylesheet
+│   └── js/
+│       └── app.js             # Frontend JavaScript
+├── truenas/                    # TrueNAS SCALE files
+│   ├── install.yaml           # Quick install manifest
+│   ├── questions.yaml         # GUI configuration
+│   ├── app.yaml               # App metadata
+│   ├── update-script.sh       # Auto-update script
+│   └── charts/                # Kubernetes manifests
+└── .github/
+    └── workflows/
+        └── build-and-push.yml # CI/CD pipeline
 ```
 
 ---
 
-## Step 6: Connectivity Testing
+## 🤝 Contributing
 
-```
-============================================
-POST-DEPLOYMENT CONNECTIVITY TEST
-============================================
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-Waiting 10 seconds for services to stabilize...
-
-Testing DNS resolution...
-✓ DNS resolves to: 203.0.113.1
-
-Testing port connectivity to minecraft.treestandk.com:25565...
-✓ Port 25565 is OPEN and responding!
-
-Testing additional ports...
-  ✓ Port 25575 is open
-
-Manual testing commands:
-  DNS check: dig minecraft.treestandk.com
-  Port test: nc -zv minecraft.treestandk.com 25565
-  Or try: telnet minecraft.treestandk.com 25565
-```
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
-## Step 7: Deployment Complete
+## 📝 License
 
-```
-============================================
-DEPLOYMENT COMPLETE
-============================================
-
-✓ Game server deployment finished successfully!
-
-Summary:
-  Deployment ID: deploy_20260121_143052_12345
-  Domain: minecraft.treestandk.com
-  Server IP: 192.168.1.50
-  Port(s): 25565 25575
-  Log file: /home/user/.gameserver-deploy/logs/deployment_20260121_143052.log
-
-DNS propagation may take 5-15 minutes.
-Test connectivity with: nc -zv minecraft.treestandk.com 25565
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## Step 8: Verify in Pterodactyl
+## 🙏 Acknowledgments
 
-1. Log into Pterodactyl panel: https://panel.treestandk.com
-2. Navigate to your server: minecraft-server
-3. Click "Start"
-4. Wait for server to boot (check console)
-5. Test connection: `minecraft.treestandk.com:25565`
-
----
-
-## Next Time: Using the Template
-
-For your second server, it's much faster:
-
-```bash
-./gameserver-deploy.sh
-
-Load from template? (y/n): y
-
-Available Templates:
-1) minecraft-standard
-Select template: 1
-
-✓ Loaded template: minecraft-standard
-
-Enter subdomain: minecraft2
-Enter server IP: 192.168.1.51
-
-[Rest auto-filled from template]
-```
+- Original automation script by treestandk.com infrastructure team
+- Built with Flask, Docker, and Kubernetes
+- Icons by Font Awesome
+- Inspired by modern DevOps practices
 
 ---
 
-## If Something Goes Wrong
+## 📞 Support
 
-### Scenario: Network Hiccup During Deployment
+### Documentation
+- [Quick Start Guide](QUICKSTART.md)
+- [TrueNAS Installation](TRUENAS-INSTALL.md)
+- [Docker Deployment](README-DOCKER.md)
+- [Building Images](BUILD-AND-PUBLISH.md)
 
-```
-Step 3: NPM configuration fails due to network timeout
+### Troubleshooting
 
-✗ Failed to create proxy host.
-
-# Fix network issue, then:
-./gameserver-deploy.sh --resume
-
-Loaded previous deployment state:
-  - Deployment ID: deploy_20260121_143052_12345
-  - Last completed step: 2
-  - Subdomain: minecraft
-
-Skipping Cloudflare DNS (already completed)
-Skipping UniFi configuration (already completed)
-
-# Continues from Step 3
-```
-
-### Scenario: Need to Undo Deployment
-
+**Can't access web interface?**
 ```bash
-./gameserver-deploy.sh --rollback
+# Check if running
+kubectl get pods -n wingman  # TrueNAS
+docker-compose ps            # Docker
+
+# View logs
+kubectl logs -f deployment/wingman -n wingman  # TrueNAS
+docker-compose logs -f                         # Docker
 ```
 
-**Output:**
-```
-============================================
-ROLLING BACK DEPLOYMENT
-============================================
+**API tests failing?**
+- Verify credentials in `.env` or Kubernetes secrets
+- Check network connectivity to external services
+- Review logs for specific error messages
 
-Domain: minecraft.treestandk.com
-Are you sure? (y/n): y
+**Deployment fails?**
+- Check deployment logs in the UI
+- Verify all external services are accessible
+- Ensure credentials are correct
+- Try rolling back and deploying again
 
-Step 4: Deleting Pterodactyl server...
-  ✓ Pterodactyl server deleted
+### Getting Help
 
-Step 3: Removing NPM proxy host...
-  ✓ NPM proxy host deleted
-
-Step 2: Removing UniFi port forward rules...
-  ✓ Deleted UniFi rule: 507f1f77bcf86cd799439011
-  ✓ Deleted UniFi rule: 507f191e810c19729de860ea
-
-Step 1: Removing Cloudflare DNS record...
-  ✓ Cloudflare DNS record deleted
-
-✓ Rollback completed successfully!
-```
+1. Check the logs (most issues are logged with details)
+2. Review documentation for your deployment method
+3. Test API connectivity in the Settings tab
+4. Check GitHub issues for similar problems
+5. Open a new issue with logs and configuration details
 
 ---
 
-## Troubleshooting Common Issues
+## 🗺️ Roadmap
 
-### Issue 1: "Port not responding" in connectivity test
+### Version 2.1 (Planned)
+- [ ] User authentication and authorization
+- [ ] Multi-user support with role-based access
+- [ ] Webhook notifications (Discord, Slack)
+- [ ] Email notifications for deployment events
+- [ ] Advanced monitoring with metrics graphs
 
-**Possible causes:**
-1. DNS not propagated yet (wait 15 minutes)
-2. Pterodactyl server still starting
-3. Game server not configured to listen on correct port
+### Version 2.2 (Future)
+- [ ] Multi-tenancy support
+- [ ] Scheduled deployments
+- [ ] Backup and restore functionality
+- [ ] Game server status monitoring
+- [ ] Resource usage tracking
+- [ ] Custom deployment hooks
 
-**Solution:**
-```bash
-# Wait a bit, then test manually
-sleep 300  # 5 minutes
-nc -zv minecraft.treestandk.com 25565
-
-# Check Pterodactyl console
-# Verify server started successfully
-```
-
-### Issue 2: "Failed to authenticate with [Service]"
-
-**Solution:**
-```bash
-# Re-validate configuration
-./gameserver-deploy.sh --validate
-
-# If test fails, check credentials
-nano ~/.gameserver-deploy/config.env
-
-# Test specific service manually
-curl -X POST https://api.cloudflare.com/client/v4/user/tokens/verify \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-### Issue 3: "DNS record already exists"
-
-**Two options:**
-
-**Option A:** Let script overwrite
-```
-⚠ DNS record already exists for minecraft.treestandk.com
-Overwrite existing record? (y/n): y
-```
-
-**Option B:** Delete manually first
-```bash
-# Delete from Cloudflare dashboard, then retry
-```
+### Version 3.0 (Long-term)
+- [ ] Multi-cloud support
+- [ ] Terraform integration
+- [ ] Ansible playbook generation
+- [ ] Cost tracking and optimization
+- [ ] Advanced analytics dashboard
 
 ---
 
-## Pro Tips
+## ⭐ Show Your Support
 
-### 1. Keep a Deployment Log
-```bash
-# Create a simple tracking file
-echo "$(date): minecraft.treestandk.com deployed to 192.168.1.50" >> ~/deployments.log
-```
-
-### 2. Test Locally First
-```bash
-# Before deploying, test the server internally
-nc -zv 192.168.1.50 25565
-```
-
-### 3. Batch Deploy Multiple Servers
-```bash
-# Create CSV: servers.csv
-minecraft1,192.168.1.50,25565,minecraft-standard
-minecraft2,192.168.1.51,25565,minecraft-standard
-valheim,192.168.1.52,2456,valheim
-
-# Deploy all (future feature, or loop manually)
-for server in $(cat servers.csv); do
-    IFS=',' read -r sub ip port tpl <<< "$server"
-    # Use template deployment
-done
-```
-
-### 4. Monitor Your Deployments
-```bash
-# Check recent deployments
-ls -lt ~/.gameserver-deploy/logs/ | head -5
-
-# Search for errors
-grep -i error ~/.gameserver-deploy/logs/*.log
-
-# View last deployment
-tail -100 $(ls -t ~/.gameserver-deploy/logs/deployment_*.log | head -1)
-```
+If you find Wingman useful, please consider:
+- Starring this repository ⭐
+- Sharing it with others
+- Contributing improvements
+- Reporting bugs and suggesting features
 
 ---
+
+**Made with ❤️ for the gaming community**
+
+Transform your game server infrastructure today! 🎮🚀

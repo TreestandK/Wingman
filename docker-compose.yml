@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  wingman:
+    build: .
+    container_name: wingman-gameserver-manager
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Domain Configuration
+      - DOMAIN=treestandk.com
+
+      # Cloudflare Configuration
+      - CF_API_TOKEN=${CF_API_TOKEN:-}
+      - CF_ZONE_ID=${CF_ZONE_ID:-}
+
+      # Nginx Proxy Manager Configuration
+      - NPM_API_URL=${NPM_API_URL:-}
+      - NPM_EMAIL=${NPM_EMAIL:-}
+      - NPM_PASSWORD=${NPM_PASSWORD:-}
+
+      # UniFi Configuration
+      - UNIFI_URL=${UNIFI_URL:-}
+      - UNIFI_USER=${UNIFI_USER:-}
+      - UNIFI_PASS=${UNIFI_PASS:-}
+      - UNIFI_SITE=${UNIFI_SITE:-default}
+      - UNIFI_IS_UDM=${UNIFI_IS_UDM:-false}
+
+      # Pterodactyl Configuration
+      - PTERO_URL=${PTERO_URL:-}
+      - PTERO_API_KEY=${PTERO_API_KEY:-}
+
+      # Network Configuration
+      - PUBLIC_IP=${PUBLIC_IP:-}
+
+      # Feature Flags
+      - ENABLE_AUTO_UNIFI=${ENABLE_AUTO_UNIFI:-true}
+      - ENABLE_SSL_AUTO=${ENABLE_SSL_AUTO:-true}
+      - ENABLE_MONITORING=${ENABLE_MONITORING:-false}
+
+      # Application Settings
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-please-change-this-secret-key}
+    volumes:
+      - wingman-data:/app/data
+      - wingman-logs:/app/logs
+      - wingman-templates:/app/templates/saved
+    networks:
+      - wingman-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  wingman-data:
+    driver: local
+  wingman-logs:
+    driver: local
+  wingman-templates:
+    driver: local
+
+networks:
+  wingman-network:
+    driver: bridge
