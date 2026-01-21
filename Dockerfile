@@ -29,7 +29,7 @@ RUN mkdir -p /app/data /app/logs /app/templates/saved /app/templates/html /app/s
 
 # Copy HTML templates and static files
 COPY templates/ /app/templates/
-COPY static/ /app/static/ 2>/dev/null || true
+COPY static/ /app/static/
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

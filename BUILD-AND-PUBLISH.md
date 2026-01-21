@@ -8,6 +8,26 @@ This guide covers building and publishing the Wingman Docker image for use with 
 - GitHub account (for GitHub Container Registry)
 - Docker Hub account (optional alternative)
 
+## Quick Start
+
+Before pushing to a registry, test your build locally:
+
+```bash
+# Build the image
+docker build -t wingman:latest .
+
+# Test it works
+docker run -d -p 5000:5000 --name wingman-test wingman:latest
+curl http://localhost:5000/health
+
+# Clean up
+docker stop wingman-test && docker rm wingman-test
+```
+
+**📖 See [BUILDING.md](BUILDING.md) for detailed local build and testing guide**
+
+---
+
 ## Method 1: GitHub Container Registry (Recommended)
 
 ### Setup
