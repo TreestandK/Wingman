@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-LABEL maintainer="treestandk.com"
+LABEL maintainer="Wingman Project"
 LABEL description="Wingman Game Server Manager - Web GUI for automated game server deployments"
 
 # Install system dependencies

@@ -21,13 +21,13 @@ description: |
   Supports: Minecraft, Valheim, Terraria, Palworld, Rust, ARK, and more.
 
 icon: https://raw.githubusercontent.com/your-repo/wingman/main/icon.png
-home: https://treestandk.com
+home: https://github.com/your-repo/wingman
 sources:
   - https://github.com/your-repo/wingman
 
 maintainers:
-  - name: treestandk.com
-    email: admin@treestandk.com
+  - name: Wingman Project
+    email: maintainer@example.com
 
 keywords:
   - game-server

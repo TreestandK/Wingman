@@ -204,7 +204,7 @@ async function loadDeployments() {
         if (result.success && result.deployments.length > 0) {
             listDiv.innerHTML = result.deployments.map(dep => `
                 <div class="deployment-card">
-                    <h4><i class="fas fa-server"></i> ${dep.subdomain}.${dep.domain || 'treestandk.com'}</h4>
+                    <h4><i class="fas fa-server"></i> ${dep.subdomain}.${dep.domain || 'yourdomain.com'}</h4>
                     <p>Server: ${dep.server_ip}:${dep.game_port}</p>
                     <div class="deployment-meta">
                         <span><i class="fas fa-gamepad"></i> ${dep.game_type}</span>

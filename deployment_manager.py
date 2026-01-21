@@ -36,7 +36,7 @@ class DeploymentManager:
     def _load_config_from_env(self) -> Dict:
         """Load configuration from environment variables"""
         return {
-            'domain': os.environ.get('DOMAIN', 'treestandk.com'),
+            'domain': os.environ.get('DOMAIN', 'yourdomain.com'),
             'cloudflare': {
                 'api_token': os.environ.get('CF_API_TOKEN', ''),
                 'zone_id': os.environ.get('CF_ZONE_ID', '')
@@ -437,3 +437,147 @@ class DeploymentManager:
             'failed_deployments': failed,
             'avg_deploy_time': '-'
         }
+
+    def get_config(self) -> Dict:
+        """Get current configuration"""
+        config_file = os.path.join(self.data_dir, 'config.json')
+
+        # Try to load from file first
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as f:
+                    saved_config = json.load(f)
+                    # Merge with environment defaults
+                    for key, value in self.config.items():
+                        if key not in saved_config:
+                            saved_config[key] = value
+                    return saved_config
+            except Exception as e:
+                logger.error(f"Error loading config file: {e}")
+
+        # Return environment-based config as fallback
+        return self.config.copy()
+
+    def save_config(self, config: Dict) -> Dict:
+        """Save configuration"""
+        config_file = os.path.join(self.data_dir, 'config.json')
+
+        try:
+            # Add enabled flags if not present
+            if 'cloudflare' in config and 'enabled' not in config['cloudflare']:
+                config['cloudflare']['enabled'] = bool(config['cloudflare'].get('api_token'))
+            if 'npm' in config and 'enabled' not in config['npm']:
+                config['npm']['enabled'] = bool(config['npm'].get('api_url'))
+            if 'unifi' in config and 'enabled' not in config['unifi']:
+                config['unifi']['enabled'] = bool(config['unifi'].get('url'))
+            if 'pterodactyl' in config and 'enabled' not in config['pterodactyl']:
+                config['pterodactyl']['enabled'] = bool(config['pterodactyl'].get('url'))
+
+            # Save to file
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+
+            # Update runtime config
+            self.config = config
+
+            logger.info("Configuration saved successfully")
+            return {'success': True, 'message': 'Configuration saved'}
+        except Exception as e:
+            logger.error(f"Error saving config: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def get_pterodactyl_nests(self) -> List[Dict]:
+        """Get list of Pterodactyl nests"""
+        config = self.get_config()
+        ptero = config.get('pterodactyl', {})
+
+        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
+            logger.warning("Pterodactyl not configured or not enabled")
+            return []
+
+        try:
+            url = f"{ptero['url'].rstrip('/')}/api/application/nests?include=eggs"
+            headers = {
+                'Authorization': f"Bearer {ptero['api_key']}",
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            return data.get('data', [])
+        except Exception as e:
+            logger.error(f"Error fetching Pterodactyl nests: {e}")
+            return []
+
+    def get_pterodactyl_eggs(self) -> List[Dict]:
+        """Get all Pterodactyl eggs from all nests"""
+        nests = self.get_pterodactyl_nests()
+        all_eggs = []
+
+        for nest in nests:
+            nest_id = nest['attributes']['id']
+            nest_name = nest['attributes']['name']
+
+            # Get eggs from relationship data if available
+            eggs_data = nest.get('relationships', {}).get('eggs', {}).get('data', [])
+
+            for egg in eggs_data:
+                egg_info = {
+                    'id': egg['attributes']['id'],
+                    'name': egg['attributes']['name'],
+                    'description': egg['attributes'].get('description', ''),
+                    'author': egg['attributes'].get('author', 'Unknown'),
+                    'nest_id': nest_id,
+                    'nest_name': nest_name
+                }
+                all_eggs.append(egg_info)
+
+        return all_eggs
+
+    def upload_pterodactyl_egg(self, nest_id: int, egg_data: Dict) -> Dict:
+        """Upload a new egg to Pterodactyl"""
+        config = self.get_config()
+        ptero = config.get('pterodactyl', {})
+
+        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
+            return {'success': False, 'error': 'Pterodactyl not configured or not enabled'}
+
+        try:
+            url = f"{ptero['url'].rstrip('/')}/api/application/nests/{nest_id}/eggs"
+            headers = {
+                'Authorization': f"Bearer {ptero['api_key']}",
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+
+            # Transform egg data to API format
+            payload = {
+                'name': egg_data.get('name', 'Imported Egg'),
+                'description': egg_data.get('description', ''),
+                'docker_image': egg_data.get('docker_image', egg_data.get('docker_images', {}).get('default', 'ubuntu:latest')),
+                'startup': egg_data.get('startup', ''),
+                'config': egg_data.get('config', {}),
+                'environment': egg_data.get('variables', [])
+            }
+
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+
+            logger.info(f"Successfully uploaded egg to nest {nest_id}")
+            return {'success': True, 'message': 'Egg uploaded successfully', 'data': response.json()}
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error uploading egg: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    error_msg = f"Error uploading egg: {error_detail}"
+                except:
+                    error_msg = f"Error uploading egg: {e.response.text}"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+        except Exception as e:
+            logger.error(f"Unexpected error uploading egg: {e}")
+            return {'success': False, 'error': str(e)}

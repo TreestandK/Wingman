@@ -33,19 +33,19 @@ Create a `.env` file in the same directory as `docker-compose.yml`:
 
 ```bash
 # Domain Configuration
-DOMAIN=treestandk.com
+DOMAIN=yourdomain.com
 
 # Cloudflare Configuration
 CF_API_TOKEN=your_cloudflare_api_token
 CF_ZONE_ID=your_cloudflare_zone_id
 
 # Nginx Proxy Manager Configuration
-NPM_API_URL=http://192.168.1.100:81/api
+NPM_API_URL=http://nginx-proxy-manager:81/api
 NPM_EMAIL=admin@example.com
 NPM_PASSWORD=your_npm_password
 
 # UniFi Configuration
-UNIFI_URL=https://192.168.1.1
+UNIFI_URL=https://unifi-controller:8443
 UNIFI_USER=admin
 UNIFI_PASS=your_unifi_password
 UNIFI_SITE=default
@@ -372,7 +372,7 @@ For issues and questions:
 
 ## Credits
 
-- Original automation script: treestandk.com infrastructure team
+- Original automation script: Community contributors
 - Web interface: Docker transformation project
 - Icons: Font Awesome
 - Framework: Flask

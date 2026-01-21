@@ -38,6 +38,27 @@ def health():
     """Health check endpoint"""
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """Get current configuration"""
+    try:
+        config = deployment_manager.get_config()
+        return jsonify({'success': True, 'config': config})
+    except Exception as e:
+        logger.error(f"Configuration retrieval error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/config', methods=['POST'])
+def save_config():
+    """Save configuration settings"""
+    try:
+        config = request.json
+        result = deployment_manager.save_config(config)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Configuration save error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/config/validate', methods=['POST'])
 def validate_config():
     """Validate configuration settings"""
@@ -158,6 +179,43 @@ def get_monitoring_stats():
         return jsonify({'success': True, 'stats': stats})
     except Exception as e:
         logger.error(f"Stats retrieval error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/pterodactyl/nests', methods=['GET'])
+def get_pterodactyl_nests():
+    """Get Pterodactyl nests"""
+    try:
+        nests = deployment_manager.get_pterodactyl_nests()
+        return jsonify({'success': True, 'nests': nests})
+    except Exception as e:
+        logger.error(f"Pterodactyl nests error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/pterodactyl/eggs', methods=['GET'])
+def get_pterodactyl_eggs():
+    """Get all Pterodactyl eggs"""
+    try:
+        eggs = deployment_manager.get_pterodactyl_eggs()
+        return jsonify({'success': True, 'eggs': eggs})
+    except Exception as e:
+        logger.error(f"Pterodactyl eggs error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/pterodactyl/eggs/upload', methods=['POST'])
+def upload_pterodactyl_egg():
+    """Upload a new egg to Pterodactyl"""
+    try:
+        data = request.json
+        nest_id = data.get('nest_id')
+        egg_data = data.get('egg_data')
+
+        if not nest_id or not egg_data:
+            return jsonify({'success': False, 'error': 'Missing nest_id or egg_data'}), 400
+
+        result = deployment_manager.upload_pterodactyl_egg(nest_id, egg_data)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Pterodactyl egg upload error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.errorhandler(404)

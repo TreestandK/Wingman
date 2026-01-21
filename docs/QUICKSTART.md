@@ -97,7 +97,7 @@ http://localhost:5000
 
 2. **Fill in the form:**
    - Subdomain: `minecraft`
-   - Server IP: `192.168.1.100`
+   - Server IP: `YOUR_SERVER_IP`
    - Game Type: Select `Minecraft (Java)`
    - Port: `25565` (auto-filled)
 

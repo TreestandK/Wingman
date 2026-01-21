@@ -33,6 +33,9 @@
             <button class="tab-button" data-tab="templates">
                 <i class="fas fa-file-code"></i> Templates
             </button>
+            <button class="tab-button" data-tab="pterodactyl">
+                <i class="fas fa-egg"></i> Pterodactyl
+            </button>
             <button class="tab-button" data-tab="monitoring">
                 <i class="fas fa-chart-line"></i> Monitoring
             </button>
@@ -247,24 +250,184 @@
                 </div>
             </div>
 
+            <!-- Pterodactyl Tab -->
+            <div class="tab-content" id="pterodactyl-tab">
+                <div class="panel">
+                    <h2><i class="fas fa-egg"></i> Pterodactyl Management</h2>
+
+                    <!-- Nest/Egg Upload Section -->
+                    <div class="form-section">
+                        <h3>Upload Game Server Egg</h3>
+                        <p class="info-message">
+                            <i class="fas fa-info-circle"></i>
+                            Upload and publish custom game server eggs to your Pterodactyl panel.
+                        </p>
+
+                        <form id="egg-upload-form">
+                            <div class="form-group">
+                                <label for="egg-file">
+                                    <i class="fas fa-file-upload"></i> Egg JSON File
+                                </label>
+                                <input type="file" id="egg-file" accept=".json" required>
+                                <small>Select a Pterodactyl egg JSON file to upload</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="nest-id">
+                                    <i class="fas fa-folder"></i> Target Nest ID
+                                </label>
+                                <input type="number" id="nest-id" placeholder="1" required>
+                                <small>The nest ID where this egg should be added</small>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="listNests()">
+                                    <i class="fas fa-list"></i> List Available Nests
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload"></i> Upload Egg
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="nests-list" style="margin-top: 20px;"></div>
+                        <div id="upload-result" style="margin-top: 20px;"></div>
+                    </div>
+
+                    <!-- Existing Eggs Section -->
+                    <div class="form-section">
+                        <h3>Manage Eggs</h3>
+                        <button class="btn btn-secondary" onclick="loadPterodactylEggs()">
+                            <i class="fas fa-sync"></i> Refresh Eggs List
+                        </button>
+                        <div id="eggs-list" style="margin-top: 20px;">
+                            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Click refresh to load eggs...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Settings Tab -->
             <div class="tab-content" id="settings-tab">
                 <div class="panel">
                     <h2><i class="fas fa-cog"></i> System Settings</h2>
-                    <p class="info-message">
-                        <i class="fas fa-info-circle"></i>
-                        Configuration is managed through environment variables in Docker Compose.
-                        Restart the container after making changes.
-                    </p>
 
-                    <div class="settings-info">
-                        <h3>Current Configuration</h3>
-                        <button class="btn btn-secondary" onclick="validateConfig()">
-                            <i class="fas fa-check-circle"></i> Validate Configuration
-                        </button>
-                        <button class="btn btn-secondary" onclick="testAllAPIs()">
-                            <i class="fas fa-plug-circle-check"></i> Test All APIs
-                        </button>
+                    <!-- Configuration Editor -->
+                    <div class="form-section">
+                        <h3>Configuration</h3>
+                        <p class="info-message">
+                            <i class="fas fa-info-circle"></i>
+                            Configure Wingman to work with your infrastructure. Changes take effect immediately.
+                        </p>
+
+                        <form id="config-form">
+                            <!-- Domain Configuration -->
+                            <div class="form-group">
+                                <label for="config-domain">
+                                    <i class="fas fa-globe"></i> Base Domain
+                                </label>
+                                <input type="text" id="config-domain" placeholder="yourdomain.com">
+                            </div>
+
+                            <!-- Cloudflare -->
+                            <div class="config-subsection">
+                                <h4><i class="fab fa-cloudflare"></i> Cloudflare</h4>
+                                <div class="form-group">
+                                    <label for="cf-api-token">API Token</label>
+                                    <input type="password" id="cf-api-token" placeholder="Enter Cloudflare API token">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cf-zone-id">Zone ID</label>
+                                    <input type="text" id="cf-zone-id" placeholder="Enter zone ID">
+                                </div>
+                                <label>
+                                    <input type="checkbox" id="enable-cloudflare">
+                                    Enable Cloudflare DNS Management
+                                </label>
+                            </div>
+
+                            <!-- Nginx Proxy Manager -->
+                            <div class="config-subsection">
+                                <h4><i class="fas fa-network-wired"></i> Nginx Proxy Manager</h4>
+                                <div class="form-group">
+                                    <label for="npm-url">API URL</label>
+                                    <input type="text" id="npm-url" placeholder="http://192.168.1.100:81/api">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npm-email">Email</label>
+                                    <input type="email" id="npm-email" placeholder="admin@example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npm-password">Password</label>
+                                    <input type="password" id="npm-password" placeholder="Enter password">
+                                </div>
+                                <label>
+                                    <input type="checkbox" id="enable-npm">
+                                    Enable Nginx Proxy Manager
+                                </label>
+                            </div>
+
+                            <!-- UniFi -->
+                            <div class="config-subsection">
+                                <h4><i class="fas fa-wifi"></i> UniFi Controller</h4>
+                                <div class="form-group">
+                                    <label for="unifi-url">Controller URL</label>
+                                    <input type="text" id="unifi-url" placeholder="https://192.168.1.1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="unifi-user">Username</label>
+                                    <input type="text" id="unifi-user" placeholder="admin">
+                                </div>
+                                <div class="form-group">
+                                    <label for="unifi-password">Password</label>
+                                    <input type="password" id="unifi-password" placeholder="Enter password">
+                                </div>
+                                <div class="form-group">
+                                    <label for="unifi-site">Site Name</label>
+                                    <input type="text" id="unifi-site" placeholder="default">
+                                </div>
+                                <label>
+                                    <input type="checkbox" id="unifi-is-udm">
+                                    This is a UDM/UCG device
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="enable-unifi">
+                                    Enable UniFi Port Forwarding
+                                </label>
+                            </div>
+
+                            <!-- Pterodactyl -->
+                            <div class="config-subsection">
+                                <h4><i class="fas fa-egg"></i> Pterodactyl Panel</h4>
+                                <div class="form-group">
+                                    <label for="ptero-url">Panel URL</label>
+                                    <input type="text" id="ptero-url" placeholder="https://panel.yourdomain.com">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ptero-api-key">Application API Key</label>
+                                    <input type="password" id="ptero-api-key" placeholder="Enter API key">
+                                </div>
+                                <label>
+                                    <input type="checkbox" id="enable-pterodactyl">
+                                    Enable Pterodactyl Integration
+                                </label>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="loadConfiguration()">
+                                    <i class="fas fa-sync"></i> Reload Configuration
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="validateConfig()">
+                                    <i class="fas fa-check-circle"></i> Validate Configuration
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="testAllAPIs()">
+                                    <i class="fas fa-plug-circle-check"></i> Test All APIs
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Configuration
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
                     <div id="config-status" class="config-status"></div>
@@ -274,7 +437,7 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>Wingman Game Server Manager v2.0 | &copy; 2024 treestandk.com</p>
+            <p>Wingman Game Server Manager v2.0</p>
         </footer>
     </div>
 
@@ -283,5 +446,6 @@
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/config-pterodactyl.js') }}"></script>
 </body>
 </html>

@@ -80,7 +80,7 @@ kubectl apply -f install.yaml
 # http://your-truenas-ip:30500
 ```
 
-**📖 See [QUICKSTART.md](QUICKSTART.md) for detailed 5-minute setup guide**
+**📖 See [Quick Start Guide](docs/QUICKSTART.md) for detailed 5-minute setup guide**
 
 ### For Docker Compose Users
 
@@ -104,22 +104,24 @@ docker-compose up -d
 
 ## 📚 Documentation
 
+**📖 [View Complete Documentation Index](docs/README.md)**
+
 ### Getting Started
-- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 5 minutes ⚡
-- **[README-DOCKER.md](README-DOCKER.md)** - Docker Compose deployment guide
-- **[TRUENAS-INSTALL.md](TRUENAS-INSTALL.md)** - Complete TrueNAS SCALE guide
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Get running in 5 minutes ⚡
+- **[Docker Compose Guide](docs/README-DOCKER.md)** - Docker Compose deployment guide
+- **[TrueNAS SCALE Guide](docs/TRUENAS-INSTALL.md)** - Complete TrueNAS SCALE guide
 
 ### Advanced
-- **[BUILDING.md](BUILDING.md)** - Local build and testing guide
-- **[BUILD-AND-PUBLISH.md](BUILD-AND-PUBLISH.md)** - Build and publish custom images
-- **[truenas/README.md](truenas/README.md)** - TrueNAS deployment files reference
+- **[Building Guide](docs/BUILDING.md)** - Local build and testing guide
+- **[Build & Publish Guide](docs/BUILD-AND-PUBLISH.md)** - Build and publish custom images
+- **[TrueNAS Files Reference](truenas/README.md)** - TrueNAS deployment files reference
 
 ### Troubleshooting
-- **[GITHUB-ACTIONS-TROUBLESHOOTING.md](GITHUB-ACTIONS-TROUBLESHOOTING.md)** - CI/CD workflow issues
-- **[FIXES-APPLIED.md](FIXES-APPLIED.md)** - Known issues and fixes
+- **[GitHub Actions Troubleshooting](docs/GITHUB-ACTIONS-TROUBLESHOOTING.md)** - CI/CD workflow issues
+- **[Fixes Applied](docs/FIXES-APPLIED.md)** - Known issues and fixes
 
 ### API Reference
-- **[API.md](API.md)** - REST API documentation *(coming soon)*
+- **[API Documentation](docs/API.md)** - REST API documentation *(coming soon)*
 
 ---
 
@@ -165,7 +167,7 @@ docker-compose up -d
 - Web GUI configuration
 - High availability support
 
-**Installation:** See [TRUENAS-INSTALL.md](TRUENAS-INSTALL.md)
+**Installation:** See [TrueNAS SCALE Guide](docs/TRUENAS-INSTALL.md)
 
 ### Option 2: Docker Compose (Recommended for Testing)
 
@@ -175,7 +177,7 @@ docker-compose up -d
 - Local development
 - Volume persistence
 
-**Installation:** See [README-DOCKER.md](README-DOCKER.md)
+**Installation:** See [Docker Compose Guide](docs/README-DOCKER.md)
 
 ### Option 3: Manual Installation
 
@@ -260,7 +262,7 @@ docker-compose pull
 docker-compose up -d
 ```
 
-**📖 See [BUILD-AND-PUBLISH.md](BUILD-AND-PUBLISH.md) for CI/CD setup**
+**📖 See [Build & Publish Guide](docs/BUILD-AND-PUBLISH.md) for CI/CD setup**
 
 ---
 
@@ -381,7 +383,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Original automation script by treestandk.com infrastructure team
+- Original automation script concept by community contributors
 - Built with Flask, Docker, and Kubernetes
 - Icons by Font Awesome
 - Inspired by modern DevOps practices
@@ -391,10 +393,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 ### Documentation
-- [Quick Start Guide](QUICKSTART.md)
-- [TrueNAS Installation](TRUENAS-INSTALL.md)
-- [Docker Deployment](README-DOCKER.md)
-- [Building Images](BUILD-AND-PUBLISH.md)
+- [Quick Start Guide](docs/QUICKSTART.md)
+- [TrueNAS Installation](docs/TRUENAS-INSTALL.md)
+- [Docker Deployment](docs/README-DOCKER.md)
+- [Building Images](docs/BUILD-AND-PUBLISH.md)
 
 ### Troubleshooting
 
@@ -427,45 +429,3 @@ docker-compose logs -f                         # Docker
 3. Test API connectivity in the Settings tab
 4. Check GitHub issues for similar problems
 5. Open a new issue with logs and configuration details
-
----
-
-## 🗺️ Roadmap
-
-### Version 2.1 (Planned)
-- [ ] User authentication and authorization
-- [ ] Multi-user support with role-based access
-- [ ] Webhook notifications (Discord, Slack)
-- [ ] Email notifications for deployment events
-- [ ] Advanced monitoring with metrics graphs
-
-### Version 2.2 (Future)
-- [ ] Multi-tenancy support
-- [ ] Scheduled deployments
-- [ ] Backup and restore functionality
-- [ ] Game server status monitoring
-- [ ] Resource usage tracking
-- [ ] Custom deployment hooks
-
-### Version 3.0 (Long-term)
-- [ ] Multi-cloud support
-- [ ] Terraform integration
-- [ ] Ansible playbook generation
-- [ ] Cost tracking and optimization
-- [ ] Advanced analytics dashboard
-
----
-
-## ⭐ Show Your Support
-
-If you find Wingman useful, please consider:
-- Starring this repository ⭐
-- Sharing it with others
-- Contributing improvements
-- Reporting bugs and suggesting features
-
----
-
-**Made with ❤️ for the gaming community**
-
-Transform your game server infrastructure today! 🎮🚀

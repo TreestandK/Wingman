@@ -15,7 +15,7 @@ service:
 
 # Application configuration
 config:
-  domain: "treestandk.com"
+  domain: "yourdomain.com"
 
   cloudflare:
     zoneId: ""

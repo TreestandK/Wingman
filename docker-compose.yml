@@ -9,7 +9,7 @@ services:
       - "5000:5000"
     environment:
       # Domain Configuration
-      - DOMAIN=treestandk.com
+      - DOMAIN=yourdomain.com
 
       # Cloudflare Configuration
       - CF_API_TOKEN=${CF_API_TOKEN:-}

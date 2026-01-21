@@ -89,7 +89,7 @@ spec:
         env:
         # Domain Configuration
         - name: DOMAIN
-          value: "treestandk.com"
+          value: "yourdomain.com"
 
         # Cloudflare Configuration
         - name: CF_API_TOKEN
@@ -102,7 +102,7 @@ spec:
 
         # Nginx Proxy Manager Configuration
         - name: NPM_API_URL
-          value: "http://192.168.1.100:81/api"
+          value: "http://nginx-proxy-manager:81/api"
         - name: NPM_EMAIL
           value: "admin@example.com"
         - name: NPM_PASSWORD
@@ -113,7 +113,7 @@ spec:
 
         # UniFi Configuration
         - name: UNIFI_URL
-          value: "https://192.168.1.1"
+          value: "https://unifi-controller:8443"
         - name: UNIFI_USER
           value: "admin"
         - name: UNIFI_PASS
