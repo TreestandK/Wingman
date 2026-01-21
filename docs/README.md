@@ -39,6 +39,14 @@ Complete documentation for the Wingman Game Server Manager.
 
 ### Troubleshooting
 
+- **[Troubleshooting Guide](TROUBLESHOOTING.md)** - General troubleshooting and debugging ⭐
+  - Configuration issues ("undefined" errors, saving problems)
+  - API connectivity problems (Cloudflare, NPM, UniFi, Pterodactyl)
+  - Browser console debugging
+  - Backend logging and error analysis
+  - Common error messages and solutions
+  - Performance issues
+
 - **[GitHub Actions Troubleshooting](GITHUB-ACTIONS-TROUBLESHOOTING.md)** - CI/CD workflow issues
   - Common errors and solutions
   - Permission issues
@@ -83,9 +91,11 @@ Found an error or want to improve the documentation? Contributions are welcome!
 If you can't find what you're looking for in the documentation:
 
 1. Check the [Quick Start Guide](QUICKSTART.md) first
-2. Review the [Troubleshooting sections](GITHUB-ACTIONS-TROUBLESHOOTING.md)
-3. Check GitHub issues for similar problems
-4. Open a new issue with details about your problem
+2. Review the [Troubleshooting Guide](TROUBLESHOOTING.md) for common issues
+3. Enable browser console logging (F12) to see detailed error messages
+4. Check backend logs for server-side errors
+5. Search [GitHub issues](https://github.com/your-repo/wingman/issues) for similar problems
+6. Open a new issue with logs and error details
 
 ---
 

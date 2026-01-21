@@ -332,21 +332,57 @@ async function validateConfig() {
     statusDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Validating...</div>';
 
     try {
+        // Get current configuration from the API
+        const configResponse = await fetch('/api/config');
+
+        if (!configResponse.ok) {
+            throw new Error(`Failed to load config: HTTP ${configResponse.status}`);
+        }
+
+        const configData = await configResponse.json();
+        console.log('Loaded config:', configData);
+
+        if (!configData.success) {
+            console.error('Config load failed:', configData);
+            statusDiv.innerHTML = '<div class="error-message"><i class="fas fa-times-circle"></i> Failed to load configuration</div>';
+            return;
+        }
+
+        // Validate the configuration
         const response = await fetch('/api/config/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+            body: JSON.stringify(configData.config)
         });
 
+        if (!response.ok) {
+            throw new Error(`Validation request failed: HTTP ${response.status}`);
+        }
+
         const result = await response.json();
+        console.log('Validation result:', result);
 
         if (result.success) {
             statusDiv.innerHTML = '<div class="success-message"><i class="fas fa-check-circle"></i> Configuration is valid!</div>';
         } else {
-            statusDiv.innerHTML = `<div class="error-message"><i class="fas fa-times-circle"></i> ${result.error}</div>`;
+            // Handle validation errors
+            const errorList = result.errors && result.errors.length > 0
+                ? result.errors.map(err => `<li>${err}</li>`).join('')
+                : '<li>Unknown validation error</li>';
+            const warningList = result.warnings && result.warnings.length > 0
+                ? `<p><strong>Warnings:</strong></p><ul>${result.warnings.map(w => `<li>${w}</li>`).join('')}</ul>`
+                : '';
+            statusDiv.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-times-circle"></i>
+                    <strong>Validation failed:</strong>
+                    <ul>${errorList}</ul>
+                    ${warningList}
+                </div>`;
         }
     } catch (error) {
-        statusDiv.innerHTML = '<div class="error-message"><i class="fas fa-times-circle"></i> Validation failed</div>';
+        console.error('Validation error:', error);
+        statusDiv.innerHTML = `<div class="error-message"><i class="fas fa-times-circle"></i> Validation failed: ${error.message}</div>`;
     }
 }
 
@@ -356,25 +392,67 @@ async function testAllAPIs() {
     statusDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Testing APIs...</div>';
 
     try {
+        // Get current configuration
+        const configResponse = await fetch('/api/config');
+
+        if (!configResponse.ok) {
+            throw new Error(`Failed to load config: HTTP ${configResponse.status}`);
+        }
+
+        const configData = await configResponse.json();
+        console.log('Loaded config for testing:', configData);
+
+        if (!configData.success) {
+            statusDiv.innerHTML = '<div class="error-message"><i class="fas fa-times-circle"></i> Failed to load configuration</div>';
+            return;
+        }
+
+        // Test API connectivity
         const response = await fetch('/api/config/test', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+            body: JSON.stringify(configData.config)
         });
 
+        if (!response.ok) {
+            throw new Error(`API test failed: HTTP ${response.status}`);
+        }
+
         const result = await response.json();
+        console.log('API test result:', result);
 
         if (result.tests) {
             const testsHtml = Object.entries(result.tests).map(([service, status]) => {
-                const icon = status ? 'fa-check-circle' : 'fa-times-circle';
-                const className = status ? 'success-message' : 'error-message';
-                return `<div class="${className}"><i class="fas ${icon}"></i> ${service}: ${status ? 'Connected' : 'Failed'}</div>`;
+                let icon, className, statusText;
+                if (status === null) {
+                    icon = 'fa-minus-circle';
+                    className = 'info-message';
+                    statusText = 'Not Configured';
+                } else if (status) {
+                    icon = 'fa-check-circle';
+                    className = 'success-message';
+                    statusText = 'Connected';
+                } else {
+                    icon = 'fa-times-circle';
+                    className = 'error-message';
+                    statusText = 'Failed';
+                }
+                return `<div class="${className}"><i class="fas ${icon}"></i> <strong>${service}:</strong> ${statusText}</div>`;
             }).join('');
 
             statusDiv.innerHTML = testsHtml;
+
+            // Show summary toast
+            const failedCount = Object.values(result.tests).filter(s => s === false).length;
+            if (failedCount > 0) {
+                showToast(`API tests completed with ${failedCount} failure(s)`, 'warning');
+            } else {
+                showToast('All configured APIs are reachable!', 'success');
+            }
         }
     } catch (error) {
-        statusDiv.innerHTML = '<div class="error-message"><i class="fas fa-times-circle"></i> API tests failed</div>';
+        console.error('API test error:', error);
+        statusDiv.innerHTML = `<div class="error-message"><i class="fas fa-times-circle"></i> API tests failed: ${error.message}</div>`;
     }
 }
 

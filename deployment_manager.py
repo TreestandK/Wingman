@@ -85,23 +85,64 @@ class DeploymentManager:
         """Validate configuration"""
         cfg = config or self.config
         errors = []
+        warnings = []
 
+        logger.info(f"Validating configuration: {cfg.get('domain', 'NO_DOMAIN')}")
+
+        # Domain is always required
         if not cfg.get('domain'):
             errors.append('Domain is not configured')
 
-        if not cfg.get('cloudflare', {}).get('api_token'):
-            errors.append('Cloudflare API token not configured')
+        # Validate Cloudflare if enabled
+        cloudflare = cfg.get('cloudflare', {})
+        if cloudflare.get('enabled'):
+            if not cloudflare.get('api_token'):
+                errors.append('Cloudflare is enabled but API token is not configured')
+            if not cloudflare.get('zone_id'):
+                errors.append('Cloudflare is enabled but Zone ID is not configured')
+        elif not cloudflare.get('api_token'):
+            warnings.append('Cloudflare API token not configured (feature disabled)')
 
-        if not cfg.get('npm', {}).get('api_url'):
-            errors.append('Nginx Proxy Manager API URL not configured')
+        # Validate NPM if enabled
+        npm = cfg.get('npm', {})
+        if npm.get('enabled'):
+            if not npm.get('api_url'):
+                errors.append('Nginx Proxy Manager is enabled but API URL is not configured')
+            if not npm.get('email'):
+                errors.append('Nginx Proxy Manager is enabled but email is not configured')
+            if not npm.get('password'):
+                errors.append('Nginx Proxy Manager is enabled but password is not configured')
+        elif not npm.get('api_url'):
+            warnings.append('Nginx Proxy Manager not configured (feature disabled)')
 
-        if not cfg.get('pterodactyl', {}).get('url'):
-            errors.append('Pterodactyl URL not configured')
+        # Validate UniFi if enabled
+        unifi = cfg.get('unifi', {})
+        if unifi.get('enabled'):
+            if not unifi.get('url'):
+                errors.append('UniFi is enabled but Controller URL is not configured')
+            if not unifi.get('user'):
+                errors.append('UniFi is enabled but username is not configured')
+            if not unifi.get('password'):
+                errors.append('UniFi is enabled but password is not configured')
+        elif not unifi.get('url'):
+            warnings.append('UniFi Controller not configured (feature disabled)')
+
+        # Validate Pterodactyl if enabled
+        pterodactyl = cfg.get('pterodactyl', {})
+        if pterodactyl.get('enabled'):
+            if not pterodactyl.get('url'):
+                errors.append('Pterodactyl is enabled but URL is not configured')
+            if not pterodactyl.get('api_key'):
+                errors.append('Pterodactyl is enabled but API key is not configured')
+        elif not pterodactyl.get('url'):
+            warnings.append('Pterodactyl not configured (feature disabled)')
+
+        logger.info(f"Validation complete: {len(errors)} errors, {len(warnings)} warnings")
 
         return {
             'success': len(errors) == 0,
             'errors': errors,
-            'warnings': []
+            'warnings': warnings
         }
 
     def test_api_connectivity(self, config: Optional[Dict] = None) -> Dict:
@@ -451,11 +492,14 @@ class DeploymentManager:
                     for key, value in self.config.items():
                         if key not in saved_config:
                             saved_config[key] = value
+                    logger.info(f"Loaded configuration from file: {config_file}")
                     return saved_config
             except Exception as e:
                 logger.error(f"Error loading config file: {e}")
+                logger.exception(e)
 
         # Return environment-based config as fallback
+        logger.info("Using environment-based configuration (no config file found)")
         return self.config.copy()
 
     def save_config(self, config: Dict) -> Dict:
@@ -463,6 +507,9 @@ class DeploymentManager:
         config_file = os.path.join(self.data_dir, 'config.json')
 
         try:
+            logger.info(f"Saving configuration to {config_file}")
+            logger.debug(f"Config data: {json.dumps(config, indent=2)}")
+
             # Add enabled flags if not present
             if 'cloudflare' in config and 'enabled' not in config['cloudflare']:
                 config['cloudflare']['enabled'] = bool(config['cloudflare'].get('api_token'))
@@ -481,9 +528,10 @@ class DeploymentManager:
             self.config = config
 
             logger.info("Configuration saved successfully")
-            return {'success': True, 'message': 'Configuration saved'}
+            return {'success': True, 'message': 'Configuration saved successfully'}
         except Exception as e:
             logger.error(f"Error saving config: {e}")
+            logger.exception(e)
             return {'success': False, 'error': str(e)}
 
     def get_pterodactyl_nests(self) -> List[Dict]:

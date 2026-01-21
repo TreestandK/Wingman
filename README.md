@@ -117,6 +117,7 @@ docker-compose up -d
 - **[TrueNAS Files Reference](truenas/README.md)** - TrueNAS deployment files reference
 
 ### Troubleshooting
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - General issues and debugging ⭐
 - **[GitHub Actions Troubleshooting](docs/GITHUB-ACTIONS-TROUBLESHOOTING.md)** - CI/CD workflow issues
 - **[Fixes Applied](docs/FIXES-APPLIED.md)** - Known issues and fixes
 
