@@ -110,8 +110,13 @@ docker-compose up -d
 - **[TRUENAS-INSTALL.md](TRUENAS-INSTALL.md)** - Complete TrueNAS SCALE guide
 
 ### Advanced
+- **[BUILDING.md](BUILDING.md)** - Local build and testing guide
 - **[BUILD-AND-PUBLISH.md](BUILD-AND-PUBLISH.md)** - Build and publish custom images
 - **[truenas/README.md](truenas/README.md)** - TrueNAS deployment files reference
+
+### Troubleshooting
+- **[GITHUB-ACTIONS-TROUBLESHOOTING.md](GITHUB-ACTIONS-TROUBLESHOOTING.md)** - CI/CD workflow issues
+- **[FIXES-APPLIED.md](FIXES-APPLIED.md)** - Known issues and fixes
 
 ### API Reference
 - **[API.md](API.md)** - REST API documentation *(coming soon)*
