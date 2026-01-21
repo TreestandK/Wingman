@@ -42,26 +42,26 @@ nano ~/.gameserver-deploy/config.env
 
 **Edit the file:**
 ```bash
-DOMAIN="treestandk.com"
+DOMAIN="yourdomain.com"
 
 # Cloudflare
 CF_API_TOKEN="your_actual_token_here"
 CF_ZONE_ID="your_zone_id_here"
 
 # NPM
-NPM_API_URL="http://192.168.1.100:81/api"
+NPM_API_URL="http://npm_ip:81/api"
 NPM_EMAIL="admin@treestandk.com"
 NPM_PASSWORD="your_npm_password"
 
 # UniFi
-UNIFI_URL="https://192.168.1.1"
+UNIFI_URL="https://unifi_ip"
 UNIFI_USER="admin"
 UNIFI_PASS="your_unifi_password"
 UNIFI_SITE="default"
 UNIFI_IS_UDM="false"
 
 # Pterodactyl
-PTERO_URL="https://panel.treestandk.com"
+PTERO_URL="https://YOUR_PANEL.com"
 PTERO_API_KEY="ptla_your_api_key_here"
 
 # Features
@@ -478,23 +478,3 @@ tail -100 $(ls -t ~/.gameserver-deploy/logs/deployment_*.log | head -1)
 ```
 
 ---
-
-## Summary: What You Accomplished
-
-Starting from nothing, you now have:
-
-✅ Automated game server deployment (5 minutes vs 30+ manual)  
-✅ Template for instant future deployments  
-✅ Full rollback capability  
-✅ Automatic connectivity verification  
-✅ Complete audit trail in logs  
-
-**Time saved per deployment:** 25+ minutes  
-**Error rate:** Near zero  
-**Rollback capability:** One command  
-
----
-
-**Congratulations!** You've successfully deployed your first automated game server. The next one will be even faster using your template.
-
-Questions? Check the full documentation or review the logs for detailed information.
