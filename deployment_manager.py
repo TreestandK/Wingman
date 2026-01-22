@@ -848,13 +848,14 @@ class DeploymentManager:
             data = response.json()
             allocations = []
             for alloc in data.get('data', []):
-                # Only include unassigned allocations
+                # Only include unassigned allocations for selection
                 if not alloc['attributes']['assigned']:
                     allocations.append({
                         'id': alloc['attributes']['id'],
                         'ip': alloc['attributes']['ip'],
                         'port': alloc['attributes']['port'],
-                        'alias': alloc['attributes'].get('alias', alloc['attributes']['ip'])
+                        'alias': alloc['attributes'].get('alias', alloc['attributes']['ip']),
+                        'assigned': alloc['attributes']['assigned']
                     })
             return allocations
         except Exception as e:
@@ -872,32 +873,75 @@ class DeploymentManager:
         if ptero.get('enabled') is False:
             return {'success': False, 'error': 'Pterodactyl is disabled in configuration'}
 
+        headers = {
+            'Authorization': f"Bearer {ptero['api_key']}",
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+
         try:
             # Get deployment parameters
             nest_id = deployment.get('pterodactyl_nest_id')
             egg_id = deployment.get('pterodactyl_egg_id')
             node_id = deployment.get('pterodactyl_node_id')
-            allocation_id = deployment.get('pterodactyl_allocation_id')
+            port_mode = deployment.get('pterodactyl_port_mode', 'select')
 
-            if not all([nest_id, egg_id, node_id, allocation_id]):
-                return {'success': False, 'error': 'Missing required Pterodactyl parameters (nest, egg, node, or allocation)'}
+            if not all([nest_id, egg_id, node_id]):
+                return {'success': False, 'error': 'Missing required Pterodactyl parameters (nest, egg, or node)'}
+
+            # Handle port allocation based on mode
+            allocation_id = None
+
+            if port_mode == 'select':
+                # Use the selected allocation
+                allocation_id = deployment.get('pterodactyl_allocation_id')
+                if not allocation_id:
+                    return {'success': False, 'error': 'No port allocation selected'}
+
+            elif port_mode == 'specify':
+                # Create a new allocation with the specified port
+                specified_port = deployment.get('pterodactyl_port')
+                if not specified_port:
+                    return {'success': False, 'error': 'No port specified'}
+
+                allocation_result = self._create_pterodactyl_allocation(
+                    ptero, headers, node_id, specified_port
+                )
+                if not allocation_result['success']:
+                    return allocation_result
+                allocation_id = allocation_result['allocation_id']
+
+            elif port_mode == 'auto':
+                # Find the first available allocation on the node
+                allocations = self.get_pterodactyl_allocations(node_id)
+                available = [a for a in allocations if not a.get('assigned')]
+                if not available:
+                    return {'success': False, 'error': 'No available port allocations on this node. Create allocations in Pterodactyl first or specify a port.'}
+                allocation_id = available[0]['id']
+                logger.info(f"Auto-selected allocation {allocation_id} (port {available[0]['port']})")
+
+            # Get resource limits from deployment (with sensible defaults)
+            # CPU is passed as percentage (100 = 1 core), memory/disk in MB
+            cpu_limit = deployment.get('pterodactyl_cpu', 200)  # Default 2 cores
+            memory_mb = deployment.get('pterodactyl_memory', 4096)  # Default 4GB
+            disk_mb = deployment.get('pterodactyl_disk', 20480)  # Default 20GB
 
             # Prepare server creation payload
             server_name = f"{deployment.get('subdomain', 'server')}-{deployment.get('game_type', 'game')}"
 
             payload = {
                 'name': server_name,
-                'user': ptero.get('default_user_id', 1),  # TODO: Make this configurable
+                'user': ptero.get('default_user_id', 1),
                 'egg': egg_id,
-                'docker_image': 'ghcr.io/pterodactyl/yolks:java_17',  # Will be overridden by egg default
-                'startup': '',  # Will use egg default
+                'docker_image': '',  # Empty string uses egg default
+                'startup': '',  # Empty string uses egg default
                 'environment': {},  # Can be customized per deployment
                 'limits': {
-                    'memory': deployment.get('memory_mb', 2048),
+                    'memory': memory_mb,
                     'swap': 0,
-                    'disk': deployment.get('disk_mb', 10240),
+                    'disk': disk_mb,
                     'io': 500,
-                    'cpu': deployment.get('cpu_limit', 100)
+                    'cpu': cpu_limit
                 },
                 'feature_limits': {
                     'databases': ptero.get('default_databases', 1),
@@ -910,12 +954,6 @@ class DeploymentManager:
             }
 
             url = f"{ptero['url'].rstrip('/')}/api/application/servers"
-            headers = {
-                'Authorization': f"Bearer {ptero['api_key']}",
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-
             response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
 
@@ -945,4 +983,51 @@ class DeploymentManager:
             return {'success': False, 'error': error_msg}
         except Exception as e:
             logger.error(f"Unexpected error creating Pterodactyl server: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _create_pterodactyl_allocation(self, ptero: Dict, headers: Dict, node_id: int, port: int) -> Dict:
+        """Create a new port allocation on a Pterodactyl node"""
+        try:
+            # Get node info to find the IP
+            node_url = f"{ptero['url'].rstrip('/')}/api/application/nodes/{node_id}"
+            node_response = requests.get(node_url, headers=headers, timeout=10)
+            node_response.raise_for_status()
+            node_data = node_response.json()
+
+            # Get the node's FQDN or primary allocation IP
+            node_fqdn = node_data['attributes']['fqdn']
+
+            # Create the allocation
+            alloc_url = f"{ptero['url'].rstrip('/')}/api/application/nodes/{node_id}/allocations"
+            alloc_payload = {
+                'ip': node_fqdn,
+                'ports': [str(port)]
+            }
+
+            response = requests.post(alloc_url, headers=headers, json=alloc_payload, timeout=10)
+            response.raise_for_status()
+
+            # Fetch allocations to find the newly created one
+            allocations = self.get_pterodactyl_allocations(node_id)
+            new_alloc = next((a for a in allocations if a['port'] == port), None)
+
+            if new_alloc:
+                logger.info(f"Created allocation {new_alloc['id']} for port {port} on node {node_id}")
+                return {'success': True, 'allocation_id': new_alloc['id']}
+            else:
+                return {'success': False, 'error': f'Allocation created but could not find it for port {port}'}
+
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error creating allocation: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    if 'errors' in error_detail:
+                        error_msg = f"Pterodactyl error: {error_detail['errors'][0].get('detail', str(error_detail))}"
+                except:
+                    error_msg = f"Pterodactyl error: {e.response.text[:200]}"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+        except Exception as e:
+            logger.error(f"Unexpected error creating allocation: {e}")
             return {'success': False, 'error': str(e)}

@@ -124,17 +124,47 @@ document.getElementById('deploy-form')?.addEventListener('submit', async functio
         const nestId = document.getElementById('ptero-nest').value;
         const eggId = document.getElementById('ptero-egg').value;
         const nodeId = document.getElementById('ptero-node').value;
-        const allocationId = document.getElementById('ptero-allocation').value;
+        const portMode = document.getElementById('ptero-port-mode').value;
 
-        if (!nestId || !eggId || !nodeId || !allocationId) {
-            showToast('Please complete all Pterodactyl fields', 'error');
+        if (!nestId || !eggId || !nodeId) {
+            showToast('Please select nest, egg, and node', 'error');
             return;
         }
 
         formData.pterodactyl_nest_id = parseInt(nestId);
         formData.pterodactyl_egg_id = parseInt(eggId);
         formData.pterodactyl_node_id = parseInt(nodeId);
-        formData.pterodactyl_allocation_id = parseInt(allocationId);
+
+        // Handle port assignment mode
+        formData.pterodactyl_port_mode = portMode;
+        if (portMode === 'select') {
+            const allocationId = document.getElementById('ptero-allocation').value;
+            if (!allocationId) {
+                showToast('Please select a port allocation', 'error');
+                return;
+            }
+            formData.pterodactyl_allocation_id = parseInt(allocationId);
+        } else if (portMode === 'specify') {
+            const port = document.getElementById('ptero-port').value;
+            if (!port || port < 1024 || port > 65535) {
+                showToast('Please enter a valid port number (1024-65535)', 'error');
+                return;
+            }
+            formData.pterodactyl_port = parseInt(port);
+        }
+        // 'auto' mode doesn't need additional params
+
+        // Resource limits (convert to Pterodactyl format)
+        const cpuCores = parseFloat(document.getElementById('ptero-cpu').value) || 2;
+        const memoryGB = parseFloat(document.getElementById('ptero-memory').value) || 4;
+        const diskGB = parseFloat(document.getElementById('ptero-disk').value) || 20;
+
+        // CPU: cores * 100 (e.g., 2 cores = 200%)
+        formData.pterodactyl_cpu = Math.round(cpuCores * 100);
+        // Memory: GB to MB
+        formData.pterodactyl_memory = Math.round(memoryGB * 1024);
+        // Disk: GB to MB
+        formData.pterodactyl_disk = Math.round(diskGB * 1024);
     }
 
     try {
@@ -662,6 +692,25 @@ document.getElementById('ptero-egg')?.addEventListener('change', function(e) {
         descElement.textContent = '';
     }
 });
+
+// Toggle port assignment mode
+function togglePortMode() {
+    const mode = document.getElementById('ptero-port-mode').value;
+    const selectGroup = document.getElementById('port-select-group');
+    const specifyGroup = document.getElementById('port-specify-group');
+
+    // Hide all port input groups
+    selectGroup.style.display = 'none';
+    specifyGroup.style.display = 'none';
+
+    // Show the appropriate group based on mode
+    if (mode === 'select') {
+        selectGroup.style.display = 'block';
+    } else if (mode === 'specify') {
+        specifyGroup.style.display = 'block';
+    }
+    // 'auto' mode doesn't show any additional fields
+}
 
 // Handle node selection change - load allocations
 document.getElementById('ptero-node')?.addEventListener('change', async function(e) {
