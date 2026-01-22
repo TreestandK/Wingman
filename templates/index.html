@@ -508,8 +508,44 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast"></div>
 
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal" style="display: none;">
+        <div class="modal-content error-modal">
+            <span class="modal-close" onclick="closeErrorModal()">&times;</span>
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2 id="error-modal-title">Error</h2>
+            </div>
+            <div class="modal-body">
+                <div class="error-message" id="error-modal-message"></div>
+                <div class="error-details" id="error-modal-details" style="display: none;">
+                    <button class="btn-collapse" onclick="toggleErrorDetails()">
+                        <i class="fas fa-chevron-down"></i> Show Technical Details
+                    </button>
+                    <div id="error-details-content" style="display: none;"></div>
+                </div>
+                <div class="error-troubleshooting" id="error-troubleshooting" style="display: none;">
+                    <h3><i class="fas fa-wrench"></i> Troubleshooting Steps</h3>
+                    <ol id="troubleshooting-steps"></ol>
+                </div>
+                <div class="error-docs" id="error-docs" style="display: none;">
+                    <a id="error-docs-link" href="#" target="_blank">
+                        <i class="fas fa-book"></i> View Documentation
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="copyErrorDetails()">
+                    <i class="fas fa-copy"></i> Copy Error Details
+                </button>
+                <button class="btn btn-primary" onclick="closeErrorModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/config-pterodactyl.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/error-modal.js') }}"></script>
 </body>
 </html>

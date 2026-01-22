@@ -146,11 +146,15 @@ class DeploymentManager:
         }
 
     def test_api_connectivity(self, config: Optional[Dict] = None) -> Dict:
-        """Test connectivity to all configured APIs"""
+        """Test connectivity to all configured APIs with detailed error reporting"""
+        from errors import handle_api_error, CloudflareError, NPMError, UniFiError, PterodactylError
+
         cfg = config or self.config
         results = {
             'success': True,
-            'tests': {}
+            'tests': {},
+            'errors': {},
+            'details': {}
         }
 
         # Test Cloudflare
@@ -161,51 +165,133 @@ class DeploymentManager:
                     headers={'Authorization': f"Bearer {cfg['cloudflare']['api_token']}"},
                     timeout=10
                 )
-                results['tests']['Cloudflare'] = response.status_code == 200
+                if response.status_code == 200:
+                    results['tests']['Cloudflare'] = True
+                    results['details']['Cloudflare'] = 'API token verified successfully'
+                else:
+                    results['tests']['Cloudflare'] = False
+                    error = CloudflareError(
+                        'Cloudflare API token validation failed',
+                        f'HTTP {response.status_code}: {response.text[:200]}',
+                        response.status_code
+                    )
+                    results['errors']['Cloudflare'] = error.to_dict()
+                    logger.error(f"Cloudflare test failed: {error.message}")
             except Exception as e:
                 results['tests']['Cloudflare'] = False
+                error = handle_api_error(e, 'Cloudflare')
+                results['errors']['Cloudflare'] = error.to_dict()
                 logger.error(f"Cloudflare test failed: {e}")
         else:
             results['tests']['Cloudflare'] = None
+            results['details']['Cloudflare'] = 'Not configured'
 
-        # Test NPM
+        # Test NPM with authentication
         if cfg.get('npm', {}).get('api_url'):
             try:
-                response = requests.get(cfg['npm']['api_url'], timeout=5)
-                results['tests']['NPM'] = response.status_code in [200, 401, 404]
+                # Try to authenticate to NPM
+                auth_response = requests.post(
+                    f"{cfg['npm']['api_url']}/tokens",
+                    json={'identity': cfg['npm']['email'], 'secret': cfg['npm']['password']},
+                    timeout=10
+                )
+                if auth_response.status_code == 200:
+                    token = auth_response.json().get('token')
+                    # Verify token works
+                    verify_response = requests.get(
+                        f"{cfg['npm']['api_url']}/users/me",
+                        headers={'Authorization': f"Bearer {token}"},
+                        timeout=5
+                    )
+                    if verify_response.status_code == 200:
+                        results['tests']['NPM'] = True
+                        results['details']['NPM'] = 'Authentication successful'
+                    else:
+                        results['tests']['NPM'] = False
+                        error = NPMError(
+                            'NPM authentication succeeded but user verification failed',
+                            f'HTTP {verify_response.status_code}: {verify_response.text[:200]}',
+                            verify_response.status_code
+                        )
+                        results['errors']['NPM'] = error.to_dict()
+                else:
+                    results['tests']['NPM'] = False
+                    error = NPMError(
+                        'NPM authentication failed',
+                        f'HTTP {auth_response.status_code}: {auth_response.text[:200]}',
+                        auth_response.status_code
+                    )
+                    results['errors']['NPM'] = error.to_dict()
+                    logger.error(f"NPM test failed: {error.message}")
             except Exception as e:
                 results['tests']['NPM'] = False
+                error = handle_api_error(e, 'NPM')
+                results['errors']['NPM'] = error.to_dict()
                 logger.error(f"NPM test failed: {e}")
         else:
             results['tests']['NPM'] = None
+            results['details']['NPM'] = 'Not configured'
 
         # Test UniFi
         if cfg.get('unifi', {}).get('url'):
             try:
-                response = requests.get(cfg['unifi']['url'], verify=False, timeout=5)
+                verify_ssl = cfg.get('unifi', {}).get('verify_ssl', False)
+                response = requests.get(cfg['unifi']['url'], verify=verify_ssl, timeout=5)
                 results['tests']['UniFi'] = True
-            except Exception:
+                results['details']['UniFi'] = 'Controller reachable'
+            except Exception as e:
                 results['tests']['UniFi'] = False
+                error = handle_api_error(e, 'UniFi Controller')
+                results['errors']['UniFi'] = error.to_dict()
+                logger.error(f"UniFi test failed: {e}")
         else:
             results['tests']['UniFi'] = None
+            results['details']['UniFi'] = 'Not configured'
 
         # Test Pterodactyl
         if cfg.get('pterodactyl', {}).get('url') and cfg.get('pterodactyl', {}).get('api_key'):
             try:
+                verify_ssl = cfg.get('pterodactyl', {}).get('verify_ssl', True)
                 response = requests.get(
                     f"{cfg['pterodactyl']['url']}/api/application/nodes",
                     headers={
                         'Authorization': f"Bearer {cfg['pterodactyl']['api_key']}",
-                        'Accept': 'Application/vnd.pterodactyl.v1+json'
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
                     },
-                    timeout=10
+                    timeout=10,
+                    verify=verify_ssl
                 )
-                results['tests']['Pterodactyl'] = response.status_code == 200
+                if response.status_code == 200:
+                    results['tests']['Pterodactyl'] = True
+                    node_count = len(response.json().get('data', []))
+                    results['details']['Pterodactyl'] = f'Connected successfully ({node_count} nodes found)'
+                else:
+                    results['tests']['Pterodactyl'] = False
+                    error = PterodactylError(
+                        'Pterodactyl API request failed',
+                        f'HTTP {response.status_code}: {response.text[:200]}',
+                        response.status_code
+                    )
+                    results['errors']['Pterodactyl'] = error.to_dict()
+                    logger.error(f"Pterodactyl test failed: {error.message}")
+            except requests.exceptions.SSLError as e:
+                results['tests']['Pterodactyl'] = False
+                error = PterodactylError(
+                    'Pterodactyl SSL certificate verification failed',
+                    f'{str(e)}. Try setting PTERO_VERIFY_SSL=false in configuration',
+                    'SSL_ERROR'
+                )
+                results['errors']['Pterodactyl'] = error.to_dict()
+                logger.error(f"Pterodactyl SSL error: {e}")
             except Exception as e:
                 results['tests']['Pterodactyl'] = False
+                error = handle_api_error(e, 'Pterodactyl')
+                results['errors']['Pterodactyl'] = error.to_dict()
                 logger.error(f"Pterodactyl test failed: {e}")
         else:
             results['tests']['Pterodactyl'] = None
+            results['details']['Pterodactyl'] = 'Not configured'
 
         # Overall success
         results['success'] = all(v in [True, None] for v in results['tests'].values())
