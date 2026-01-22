@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:alpine
 
 LABEL maintainer="Wingman Project"
 LABEL description="Wingman Game Server Manager - Web GUI for automated game server deployments"
