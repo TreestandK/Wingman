@@ -456,7 +456,7 @@ class DeploymentManager:
             self._save_deployments()
 
     def _update_deployment_step(self, deployment_id: str, step_name: str, status: str, progress: int):
-        """Update deployment step status"""
+        """Update deployment step status and emit WebSocket event"""
         deployment = self.deployments[deployment_id]
         deployment['progress'] = progress
 
@@ -474,10 +474,38 @@ class DeploymentManager:
         self._add_log(deployment_id, f"Step: {step_name} - {status}")
         self._save_deployments()
 
+        # Emit WebSocket event for progress update
+        try:
+            from app import socketio
+            socketio.emit('deployment_progress', {
+                'deployment_id': deployment_id,
+                'step_name': step_name,
+                'status': status,
+                'progress': progress,
+                'steps': deployment['steps']
+            })
+        except Exception as e:
+            logger.debug(f"Failed to emit progress WebSocket event: {e}")
+
     def _add_log(self, deployment_id: str, message: str):
-        """Add log entry to deployment"""
+        """Add log entry to deployment and emit WebSocket event"""
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.deployments[deployment_id]['logs'].append(f"[{timestamp}] {message}")
+        log_entry = f"[{timestamp}] {message}"
+        self.deployments[deployment_id]['logs'].append(log_entry)
+
+        # Emit WebSocket event for real-time updates
+        try:
+            # Import here to avoid circular dependency
+            from app import socketio
+            socketio.emit('deployment_log', {
+                'deployment_id': deployment_id,
+                'message': message,
+                'timestamp': timestamp,
+                'log_entry': log_entry
+            })
+        except Exception as e:
+            # Don't fail deployment if WebSocket emission fails
+            logger.debug(f"Failed to emit WebSocket event: {e}")
 
     def _configure_cloudflare(self, deployment: Dict):
         """Configure Cloudflare DNS"""

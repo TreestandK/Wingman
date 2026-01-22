@@ -163,7 +163,12 @@ function showDeploymentProgress(deploymentId) {
     const stepsDiv = document.getElementById('deployment-steps');
     progressDiv.style.display = 'block';
 
-    // Poll for status
+    // Start WebSocket connection for real-time updates
+    if (typeof watchDeployment === 'function') {
+        watchDeployment(deploymentId);
+    }
+
+    // Poll for status (fallback and final state check)
     const pollInterval = setInterval(async () => {
         try {
             const response = await fetch(`/api/deploy/${deploymentId}/status`);

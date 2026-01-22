@@ -261,6 +261,22 @@
                             <div class="progress-fill" id="progress-fill"></div>
                         </div>
                         <div id="deployment-steps"></div>
+
+                        <!-- Real-Time Console -->
+                        <div id="deployment-console" class="deployment-console" style="display: none;">
+                            <div class="console-header">
+                                <h4><i class="fas fa-terminal"></i> Deployment Console</h4>
+                                <div class="console-controls">
+                                    <button class="btn-icon" onclick="clearConsole()" title="Clear console">
+                                        <i class="fas fa-eraser"></i>
+                                    </button>
+                                    <button class="btn-icon" onclick="exportConsoleLogs()" title="Export logs">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="deployment-console-logs" class="console-logs"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -544,6 +560,8 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/websocket-client.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/config-pterodactyl.js') }}"></script>
     <script src="{{ url_for('static', filename='js/error-modal.js') }}"></script>

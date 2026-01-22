@@ -5,6 +5,7 @@ Flask application for managing game server deployments
 """
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_socketio import SocketIO, emit
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
@@ -20,6 +21,9 @@ secret = os.environ.get('FLASK_SECRET_KEY')
 if not secret or len(secret) < 32:
     raise RuntimeError('FLASK_SECRET_KEY must be set to a strong random value (>=32 chars)')
 app.secret_key = secret
+
+# Initialize SocketIO for real-time deployment logs
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Session cookie hardening (set SESSION_COOKIE_SECURE=true when behind HTTPS)
 app.config.update(
@@ -502,5 +506,5 @@ if __name__ == '__main__':
     os.makedirs('/app/logs', exist_ok=True)
     os.makedirs('/app/templates/saved', exist_ok=True)
 
-    # Run the application
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    # Run the application with SocketIO support
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
