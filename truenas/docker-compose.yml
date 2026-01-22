@@ -1,22 +1,35 @@
+# TrueNAS SCALE Docker Compose Configuration for Wingman
+# This configuration uses bind mounts for TrueNAS storage pools
+
 version: '3.8'
+
+networks:
+  wingman-network:
+    driver: bridge
 
 services:
   wingman:
     image: ghcr.io/treestandk/wingman:latest
     container_name: wingman-gameserver-manager
     restart: unless-stopped
+
     ports:
-      - "5000:5000"
+      - '5000:5000'
+
+    networks:
+      - wingman-network
+
     environment:
       # Domain Configuration
-      - DOMAIN=${DOMAIN:-yourdomain.com}
+      - DOMAIN=treestandk.com
 
       # Authentication & Security (NEW!)
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}  # REQUIRED: Change this!
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-}  # REQUIRED: 32+ character secret key
-      - ENABLE_AUTH=${ENABLE_AUTH:-true}  # Enable user authentication
-      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-false}  # Set true when using HTTPS
-      - ENABLE_SAML=${ENABLE_SAML:-false}  # Enable SAML SSO
+      # IMPORTANT: Change these default values!
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-please-change-this-secret-key}
+      - ENABLE_AUTH=${ENABLE_AUTH:-true}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-false}
+      - ENABLE_SAML=${ENABLE_SAML:-false}
 
       # Cloudflare Configuration
       - CF_API_TOKEN=${CF_API_TOKEN:-}
@@ -47,12 +60,11 @@ services:
       - ENABLE_MONITORING=${ENABLE_MONITORING:-false}
 
     volumes:
-      - wingman-data:/app/data
-      - wingman-logs:/app/logs
-      - wingman-templates:/app/templates/saved
-
-    networks:
-      - wingman-network
+      # TrueNAS SCALE bind mounts
+      # IMPORTANT: Update these paths to match your TrueNAS pool
+      - /mnt/Extra_Pool/apps/wingman/data:/app/data
+      - /mnt/Extra_Pool/apps/wingman/logs:/app/logs
+      - /mnt/Extra_Pool/apps/wingman/templates:/app/templates/saved
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
@@ -60,15 +72,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-volumes:
-  wingman-data:
-    driver: local
-  wingman-logs:
-    driver: local
-  wingman-templates:
-    driver: local
-
-networks:
-  wingman-network:
-    driver: bridge

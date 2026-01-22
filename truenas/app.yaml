@@ -1,53 +1,82 @@
+# TrueNAS SCALE Application Metadata
+# This file defines the Wingman application for TrueNAS SCALE's app catalog
+
 name: wingman
-version: 2.0.0
-app_version: 2.0.0
+version: 2.1.0
+app_version: 2.1.0
+train: stable
+
 categories:
   - gaming
   - management
   - automation
+
+title: "Wingman Game Server Manager"
 description: |
-  Wingman Game Server Manager - Automated game server deployment and management system.
+  **Wingman** - Automated game server deployment and management system with a beautiful web interface.
 
-  Features:
-  - Web-based GUI for game server deployment
-  - Automatic Cloudflare DNS configuration
-  - UniFi port forwarding automation
-  - Nginx Proxy Manager integration
-  - Pterodactyl panel support
-  - Template system for common configurations
-  - Real-time deployment monitoring
-  - One-click rollback functionality
+  Transform your game server infrastructure from command-line scripts to a modern, web-based automation
+  platform with real-time monitoring, one-click deployments, and automatic rollback capabilities.
 
-  Supports: Minecraft, Valheim, Terraria, Palworld, Rust, ARK, and more.
+  ### Key Features:
+  - 🎮 **One-Click Deployments** - Deploy game servers with a single click
+  - 🔐 **Authentication & RBAC** - Built-in user management with Admin, Operator, and Viewer roles
+  - 🌐 **DNS Automation** - Automatic Cloudflare DNS configuration
+  - 🔌 **Port Forwarding** - Automated UniFi controller integration
+  - 🔒 **SSL Certificates** - Automatic SSL via Nginx Proxy Manager
+  - 🎯 **Pterodactyl Integration** - Full game panel support with egg selection
+  - 📊 **Real-Time Console** - WebSocket-based live deployment monitoring
+  - 📋 **Templates** - Save and reuse server configurations
+  - ↩️ **Rollback** - One-click rollback on failed deployments
+  - 🔍 **Enhanced Error Handling** - Detailed error messages with troubleshooting steps
 
-icon: https://raw.githubusercontent.com/your-repo/wingman/main/icon.png
-home: https://github.com/your-repo/wingman
+  ### Supported Game Servers:
+  Minecraft (Java & Bedrock), Valheim, Terraria, Palworld, Rust, ARK: Survival Evolved, and more.
+
+  ### Requirements:
+  - Cloudflare account with API token (for DNS management)
+  - Nginx Proxy Manager (for reverse proxy and SSL)
+  - UniFi Controller (optional, for port forwarding)
+  - Pterodactyl Panel (optional, for game server hosting)
+
+icon: https://raw.githubusercontent.com/treestandk/wingman/main/static/favicon.svg
+home: https://github.com/treestandk/wingman
 sources:
-  - https://github.com/your-repo/wingman
+  - https://github.com/treestandk/wingman
 
 maintainers:
-  - name: Wingman Project
-    email: maintainer@example.com
+  - name: TreestandK
+    email: contact@treestandk.com
+    url: https://github.com/treestandk
 
 keywords:
   - game-server
   - automation
   - deployment
   - minecraft
+  - valheim
+  - terraria
+  - palworld
+  - rust
+  - ark
   - pterodactyl
   - cloudflare
   - nginx
+  - unifi
+  - rbac
+  - authentication
 
+# Security and capabilities
 capabilities:
-  - NET_ADMIN
-  - NET_RAW
+  - NET_ADMIN  # Required for network management
+  - NET_RAW    # Required for raw socket operations
 
 host_network: false
 privileged: false
 
 # Docker image configuration
 image:
-  repository: ghcr.io/your-username/wingman
+  repository: ghcr.io/treestandk/wingman
   tag: latest
   pullPolicy: Always
 
@@ -55,33 +84,170 @@ image:
 service:
   type: NodePort
   port: 5000
+  targetPort: 5000
   nodePort: 30500
+  protocol: TCP
 
-# Persistent storage
+# Environment variables
+env:
+  # Flask configuration
+  - name: FLASK_APP
+    value: "app.py"
+  - name: FLASK_ENV
+    value: "production"
+  - name: PYTHONUNBUFFERED
+    value: "1"
+
+  # Domain configuration
+  - name: DOMAIN
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: domain
+
+  # Authentication (enabled by default)
+  - name: ENABLE_AUTH
+    value: "true"
+  - name: SESSION_COOKIE_SECURE
+    value: "false"  # Set to true when using HTTPS
+  - name: ENABLE_SAML
+    value: "false"
+
+  # Admin credentials
+  - name: ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: wingman-secrets
+        key: admin-password
+
+  # Flask secret key for sessions
+  - name: FLASK_SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: wingman-secrets
+        key: flask-secret-key
+
+  # Cloudflare configuration
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: wingman-secrets
+        key: cf-api-token
+        optional: true
+  - name: CF_ZONE_ID
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: cf-zone-id
+        optional: true
+
+  # Nginx Proxy Manager configuration
+  - name: NPM_API_URL
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: npm-api-url
+        optional: true
+  - name: NPM_EMAIL
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: npm-email
+        optional: true
+  - name: NPM_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: wingman-secrets
+        key: npm-password
+        optional: true
+
+  # UniFi configuration
+  - name: UNIFI_URL
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: unifi-url
+        optional: true
+  - name: UNIFI_USER
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: unifi-user
+        optional: true
+  - name: UNIFI_PASS
+    valueFrom:
+      secretKeyRef:
+        name: wingman-secrets
+        key: unifi-password
+        optional: true
+  - name: UNIFI_SITE
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: unifi-site
+        optional: true
+  - name: UNIFI_IS_UDM
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: unifi-is-udm
+        optional: true
+
+  # Pterodactyl configuration
+  - name: PTERO_URL
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: ptero-url
+        optional: true
+  - name: PTERO_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: wingman-secrets
+        key: ptero-api-key
+        optional: true
+
+  # Public IP (optional, auto-detected if not set)
+  - name: PUBLIC_IP
+    valueFrom:
+      configMapKeyRef:
+        name: wingman-config
+        key: public-ip
+        optional: true
+
+# Persistent storage volumes
 persistence:
   data:
     enabled: true
     type: pvc
-    size: 1Gi
+    size: 2Gi
     mountPath: /app/data
+    accessMode: ReadWriteOnce
+    storageClass: ""  # Uses default storage class
+
   logs:
     enabled: true
     type: pvc
-    size: 2Gi
+    size: 5Gi
     mountPath: /app/logs
+    accessMode: ReadWriteOnce
+    storageClass: ""
+
   templates:
     enabled: true
     type: pvc
-    size: 512Mi
+    size: 1Gi
     mountPath: /app/templates/saved
+    accessMode: ReadWriteOnce
+    storageClass: ""
 
-# Resource limits
+# Resource limits and requests
 resources:
   limits:
-    memory: 512Mi
-    cpu: 1000m
+    memory: 1Gi
+    cpu: 2000m
   requests:
-    memory: 256Mi
+    memory: 512Mi
     cpu: 500m
 
 # Health checks
@@ -89,21 +255,117 @@ livenessProbe:
   httpGet:
     path: /health
     port: 5000
-  initialDelaySeconds: 30
+    scheme: HTTP
+  initialDelaySeconds: 60
   periodSeconds: 30
   timeoutSeconds: 10
+  successThreshold: 1
+  failureThreshold: 3
 
 readinessProbe:
   httpGet:
     path: /health
     port: 5000
-  initialDelaySeconds: 10
+    scheme: HTTP
+  initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
 
-# Auto-update configuration
+startupProbe:
+  httpGet:
+    path: /health
+    port: 5000
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 12
+
+# Update strategy
 updateStrategy:
   type: RollingUpdate
   rollingUpdate:
-    maxUnavailable: 1
+    maxUnavailable: 0
     maxSurge: 1
+
+# Restart policy
+restartPolicy: Always
+
+# Pod security context
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
+  fsGroup: 0
+  fsGroupChangePolicy: "OnRootMismatch"
+
+# Container security context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+  capabilities:
+    add:
+      - NET_ADMIN
+      - NET_RAW
+    drop:
+      - ALL
+
+# DNS configuration
+dnsPolicy: ClusterFirst
+
+# Notes to display after installation
+notes: |
+  ## 🎉 Wingman has been successfully installed!
+
+  ### Access the Web Interface
+
+  Access Wingman at: **http://{{ .Release.Namespace }}.{{ .Values.config.domain }}:30500**
+  Or via your TrueNAS IP: **http://<truenas-ip>:30500**
+
+  ### Default Login Credentials
+
+  - **Username:** admin
+  - **Password:** (the password you set during installation)
+
+  ### First Steps
+
+  1. **Login** with the admin credentials
+  2. **Configure API Credentials** in the Settings tab:
+     - Cloudflare API token and Zone ID
+     - Nginx Proxy Manager credentials
+     - UniFi Controller (optional)
+     - Pterodactyl Panel (optional)
+  3. **Test Connections** using the "Test All APIs" button
+  4. **Deploy Your First Server** from the Deploy tab!
+
+  ### Important Security Notes
+
+  - Change the default admin password immediately after first login
+  - Use strong passwords for all service integrations
+  - Enable HTTPS and set SESSION_COOKIE_SECURE=true in production
+  - Consider enabling SAML for enterprise authentication
+
+  ### Documentation
+
+  - Quick Start: https://github.com/treestandk/wingman/blob/main/QUICK_START.md
+  - Full Documentation: https://github.com/treestandk/wingman/tree/main/docs
+  - Troubleshooting: https://github.com/treestandk/wingman/blob/main/docs/TROUBLESHOOTING.md
+
+  ### Support
+
+  - GitHub Issues: https://github.com/treestandk/wingman/issues
+  - Documentation: https://github.com/treestandk/wingman/tree/main/docs
+
+  ### Monitoring
+
+  Check deployment status:
+  ```
+  kubectl get pods -n {{ .Release.Namespace }}
+  kubectl logs -f deployment/wingman -n {{ .Release.Namespace }}
+  ```
+
+  Happy gaming! 🎮

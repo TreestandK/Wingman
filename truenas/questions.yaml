@@ -253,7 +253,7 @@ questions:
     group: "Configuration"
     schema:
       type: string
-      default: "ghcr.io/your-username/wingman"
+      default: "ghcr.io/treestandk/wingman"
 
   - variable: image.tag
     label: "Image Tag"
@@ -314,9 +314,45 @@ questions:
   # Application Secrets
   - variable: secrets.flaskSecretKey
     label: "Flask Secret Key"
-    description: "Secret key for Flask sessions (auto-generated if empty)"
+    description: "Secret key for Flask sessions (minimum 32 characters, auto-generated if empty)"
     group: "Credentials"
     schema:
       type: string
       private: true
       default: ""
+      required: false
+
+  - variable: secrets.adminPassword
+    label: "Admin Password"
+    description: "Default admin user password (required for authentication)"
+    group: "Credentials"
+    schema:
+      type: string
+      private: true
+      default: "changeme"
+      required: true
+
+  # Authentication Configuration
+  - variable: config.auth.enabled
+    label: "Enable Authentication"
+    description: "Require users to login to access Wingman"
+    group: "Configuration"
+    schema:
+      type: boolean
+      default: true
+
+  - variable: config.auth.sessionCookieSecure
+    label: "Secure Session Cookies"
+    description: "Enable secure cookies (requires HTTPS)"
+    group: "Configuration"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: config.auth.enableSaml
+    label: "Enable SAML Authentication"
+    description: "Enable SAML SSO authentication"
+    group: "Configuration"
+    schema:
+      type: boolean
+      default: false
