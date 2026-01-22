@@ -7,7 +7,7 @@
 **Windows (PowerShell):**
 ```powershell
 docker run -d -p 5000:5000 `
-  -e ADMIN_PASSWORD=YourSecurePassword123 `
+  -e ADMIN_PASSWORD=REPLACEME `
   -e FLASK_SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))") `
   -e DOMAIN=yourdomain.com `
   -v ${PWD}/data:/app/data `
@@ -19,7 +19,7 @@ docker run -d -p 5000:5000 `
 **Linux/Mac:**
 ```bash
 docker run -d -p 5000:5000 \
-  -e ADMIN_PASSWORD=YourSecurePassword123 \
+  -e ADMIN_PASSWORD=REPLACEME \
   -e FLASK_SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))") \
   -e DOMAIN=yourdomain.com \
   -v $(pwd)/data:/app/data \
@@ -40,7 +40,7 @@ services:
       - "5000:5000"
     environment:
       # Auth (enabled by default)
-      - ADMIN_PASSWORD=YourSecurePassword123
+      - ADMIN_PASSWORD=REPLACEME
       - FLASK_SECRET_KEY=generate-a-random-32-char-key
 
       # Your configuration
