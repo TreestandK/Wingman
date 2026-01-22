@@ -31,6 +31,16 @@ logger = logging.getLogger(__name__)
 deployment_manager = DeploymentManager()
 auth_manager = AuthManager()
 
+# Add cache-control headers to prevent aggressive browser caching
+@app.after_request
+def add_header(response):
+    """Add headers to prevent caching of HTML pages (fixes Firefox caching issues)"""
+    if response.content_type and 'text/html' in response.content_type:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 @app.route('/')
 def index():
     """Main dashboard - redirect to login if auth enabled and not authenticated"""
@@ -39,7 +49,13 @@ def index():
         logger.info("Redirecting to login page")
         return redirect(url_for('login'))
     logger.info("Serving index.html")
-    return render_template('index.html')
+    response = render_template('index.html')
+    # Prevent caching of authenticated pages
+    return response, 200, {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    }
 
 @app.route('/login', methods=['GET'])
 def login():
@@ -48,7 +64,13 @@ def login():
         return redirect(url_for('index'))
     if 'username' in session:
         return redirect(url_for('index'))
-    return render_template('login.html')
+    response = render_template('login.html')
+    # Prevent caching of login page
+    return response, 200, {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    }
 
 @app.route('/api/auth/login', methods=['POST'])
 def api_login():
