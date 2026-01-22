@@ -87,6 +87,9 @@ def api_logout():
 @app.route('/api/auth/status', methods=['GET'])
 def auth_status():
     """Get authentication status"""
+    # Log current state for debugging
+    logger.info(f"auth_status called: auth_manager.auth_enabled={auth_manager.auth_enabled}, ENABLE_AUTH env={os.environ.get('ENABLE_AUTH', 'NOT SET')}")
+
     return jsonify({
         'success': True,
         'auth_enabled': auth_manager.auth_enabled,
@@ -101,6 +104,31 @@ def auth_status():
 def health():
     """Health check endpoint"""
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+
+@app.route('/api/auth/debug', methods=['GET'])
+def auth_debug():
+    """Debug endpoint to troubleshoot auth issues"""
+    return jsonify({
+        'auth_manager': {
+            'auth_enabled': auth_manager.auth_enabled,
+            'auth_enabled_type': type(auth_manager.auth_enabled).__name__,
+            'saml_enabled': auth_manager.saml_enabled,
+            'users_count': len(auth_manager.users),
+            'users': list(auth_manager.users.keys())
+        },
+        'environment': {
+            'ENABLE_AUTH': os.environ.get('ENABLE_AUTH', 'NOT SET'),
+            'ENABLE_SAML': os.environ.get('ENABLE_SAML', 'NOT SET'),
+            'FLASK_SECRET_KEY_LENGTH': len(os.environ.get('FLASK_SECRET_KEY', ''))
+        },
+        'session': {
+            'authenticated': 'username' in session,
+            'username': session.get('username'),
+            'role': session.get('role')
+        },
+        'auth_manager_id': id(auth_manager),
+        'timestamp': datetime.now().isoformat()
+    })
 
 @app.route('/api/config', methods=['GET'])
 @login_required
