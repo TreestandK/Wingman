@@ -1,8 +1,6 @@
 # TrueNAS SCALE Docker Compose Configuration for Wingman
 # This configuration uses bind mounts for TrueNAS storage pools
 
-version: '3.8'
-
 networks:
   wingman-network:
     driver: bridge
