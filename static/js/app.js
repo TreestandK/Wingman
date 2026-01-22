@@ -92,8 +92,9 @@ document.getElementById('deploy-form')?.addEventListener('submit', async functio
         server_ip: document.getElementById('server-ip').value,
         game_type: document.getElementById('game-type').value,
         game_port: parseInt(document.getElementById('game-port').value),
-        memory: parseInt(document.getElementById('memory').value),
-        disk: parseInt(document.getElementById('disk').value),
+        memory_mb: parseInt(document.getElementById('memory').value),
+        disk_mb: parseInt(document.getElementById('disk').value),
+        cpu_limit: parseInt(document.getElementById('cpu').value),
         enable_ssl: document.getElementById('enable-ssl').checked,
         enable_monitoring: document.getElementById('enable-monitoring').checked,
         protocol: document.getElementById('protocol').value,
@@ -105,6 +106,24 @@ document.getElementById('deploy-form')?.addEventListener('submit', async functio
     const additionalPortsStr = document.getElementById('additional-ports').value;
     if (additionalPortsStr) {
         formData.additional_ports = additionalPortsStr.split(',').map(p => parseInt(p.trim())).filter(p => !isNaN(p));
+    }
+
+    // Add Pterodactyl configuration if enabled
+    if (document.getElementById('enable-pterodactyl').checked) {
+        const nestId = document.getElementById('ptero-nest').value;
+        const eggId = document.getElementById('ptero-egg').value;
+        const nodeId = document.getElementById('ptero-node').value;
+        const allocationId = document.getElementById('ptero-allocation').value;
+
+        if (!nestId || !eggId || !nodeId || !allocationId) {
+            showToast('Please complete all Pterodactyl fields', 'error');
+            return;
+        }
+
+        formData.pterodactyl_nest_id = parseInt(nestId);
+        formData.pterodactyl_egg_id = parseInt(eggId);
+        formData.pterodactyl_node_id = parseInt(nodeId);
+        formData.pterodactyl_allocation_id = parseInt(allocationId);
     }
 
     try {
@@ -504,6 +523,168 @@ async function deleteTemplate(templateName) {
 
     showToast('Template deletion not yet implemented', 'warning');
 }
+
+// Pterodactyl Integration
+let pterodactylData = {
+    nests: [],
+    eggs: [],
+    nodes: [],
+    allocations: {}
+};
+
+// Toggle Pterodactyl configuration section
+document.getElementById('enable-pterodactyl')?.addEventListener('change', function(e) {
+    const config = document.getElementById('pterodactyl-config');
+    if (e.target.checked) {
+        config.style.display = 'block';
+        loadPterodactylData();
+    } else {
+        config.style.display = 'none';
+    }
+});
+
+// Load all Pterodactyl data
+async function loadPterodactylData() {
+    await Promise.all([
+        loadPterodactylNests(),
+        loadPterodactylNodes()
+    ]);
+}
+
+// Load Pterodactyl nests
+async function loadPterodactylNests() {
+    try {
+        const response = await fetch('/api/pterodactyl/nests');
+        const result = await response.json();
+
+        if (result.success && result.nests) {
+            pterodactylData.nests = result.nests;
+            const nestSelect = document.getElementById('ptero-nest');
+            nestSelect.innerHTML = '<option value="">Select a nest...</option>';
+
+            result.nests.forEach(nest => {
+                const option = document.createElement('option');
+                option.value = nest.attributes.id;
+                option.textContent = nest.attributes.name;
+                option.dataset.nest = JSON.stringify(nest);
+                nestSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading Pterodactyl nests:', error);
+    }
+}
+
+// Load Pterodactyl nodes
+async function loadPterodactylNodes() {
+    try {
+        const response = await fetch('/api/pterodactyl/nodes');
+        const result = await response.json();
+
+        if (result.success && result.nodes) {
+            pterodactylData.nodes = result.nodes;
+            const nodeSelect = document.getElementById('ptero-node');
+            nodeSelect.innerHTML = '<option value="">Select a node...</option>';
+
+            result.nodes.forEach(node => {
+                const option = document.createElement('option');
+                option.value = node.id;
+                option.textContent = `${node.name} (${node.fqdn})`;
+                option.dataset.node = JSON.stringify(node);
+                nodeSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading Pterodactyl nodes:', error);
+    }
+}
+
+// Handle nest selection change
+document.getElementById('ptero-nest')?.addEventListener('change', async function(e) {
+    const nestId = e.target.value;
+    const eggSelect = document.getElementById('ptero-egg');
+
+    if (!nestId) {
+        eggSelect.innerHTML = '<option value="">Select a nest first...</option>';
+        return;
+    }
+
+    eggSelect.innerHTML = '<option value="">Loading eggs...</option>';
+
+    try {
+        const nestData = JSON.parse(e.target.options[e.target.selectedIndex].dataset.nest);
+        const eggs = nestData.relationships?.eggs?.data || [];
+
+        eggSelect.innerHTML = '<option value="">Select an egg...</option>';
+
+        eggs.forEach(egg => {
+            const option = document.createElement('option');
+            option.value = egg.attributes.id;
+            option.textContent = egg.attributes.name;
+            option.dataset.description = egg.attributes.description || '';
+            option.dataset.author = egg.attributes.author || 'Unknown';
+            eggSelect.appendChild(option);
+        });
+
+        if (eggs.length === 0) {
+            eggSelect.innerHTML = '<option value="">No eggs available in this nest</option>';
+        }
+    } catch (error) {
+        console.error('Error loading eggs:', error);
+        eggSelect.innerHTML = '<option value="">Error loading eggs</option>';
+    }
+});
+
+// Handle egg selection change - show description
+document.getElementById('ptero-egg')?.addEventListener('change', function(e) {
+    const descElement = document.getElementById('egg-description');
+    if (e.target.value) {
+        const description = e.target.options[e.target.selectedIndex].dataset.description;
+        const author = e.target.options[e.target.selectedIndex].dataset.author;
+        descElement.textContent = description ? `${description} (by ${author})` : '';
+    } else {
+        descElement.textContent = '';
+    }
+});
+
+// Handle node selection change - load allocations
+document.getElementById('ptero-node')?.addEventListener('change', async function(e) {
+    const nodeId = e.target.value;
+    const allocationSelect = document.getElementById('ptero-allocation');
+
+    if (!nodeId) {
+        allocationSelect.innerHTML = '<option value="">Select a node first...</option>';
+        return;
+    }
+
+    allocationSelect.innerHTML = '<option value="">Loading allocations...</option>';
+
+    try {
+        const response = await fetch(`/api/pterodactyl/nodes/${nodeId}/allocations`);
+        const result = await response.json();
+
+        if (result.success && result.allocations) {
+            pterodactylData.allocations[nodeId] = result.allocations;
+            allocationSelect.innerHTML = '<option value="">Select a port...</option>';
+
+            result.allocations.forEach(alloc => {
+                const option = document.createElement('option');
+                option.value = alloc.id;
+                option.textContent = `${alloc.alias}:${alloc.port}`;
+                allocationSelect.appendChild(option);
+            });
+
+            if (result.allocations.length === 0) {
+                allocationSelect.innerHTML = '<option value="">No available ports on this node</option>';
+            }
+        } else {
+            allocationSelect.innerHTML = '<option value="">Error loading allocations</option>';
+        }
+    } catch (error) {
+        console.error('Error loading allocations:', error);
+        allocationSelect.innerHTML = '<option value="">Error loading allocations</option>';
+    }
+});
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {

@@ -338,6 +338,26 @@ def upload_pterodactyl_egg():
         logger.error(f"Pterodactyl egg upload error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/pterodactyl/nodes', methods=['GET'])
+def get_pterodactyl_nodes():
+    """Get Pterodactyl nodes"""
+    try:
+        nodes = deployment_manager.get_pterodactyl_nodes()
+        return jsonify({'success': True, 'nodes': nodes})
+    except Exception as e:
+        logger.error(f"Pterodactyl nodes error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/pterodactyl/nodes/<int:node_id>/allocations', methods=['GET'])
+def get_pterodactyl_allocations(node_id):
+    """Get available allocations for a node"""
+    try:
+        allocations = deployment_manager.get_pterodactyl_allocations(node_id)
+        return jsonify({'success': True, 'allocations': allocations})
+    except Exception as e:
+        logger.error(f"Pterodactyl allocations error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # User Management Endpoints
 @app.route('/api/users', methods=['GET'])
 @role_required(['admin'])

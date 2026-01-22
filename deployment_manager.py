@@ -325,10 +325,21 @@ class DeploymentManager:
             self._update_deployment_step(deployment_id, 'Nginx Proxy Manager', 'completed', 75)
 
             # Step 4: Pterodactyl (optional)
-            if self.config['pterodactyl']['url']:
+            if self.config['pterodactyl'].get('enabled') and deployment.get('pterodactyl_egg_id'):
                 self._update_deployment_step(deployment_id, 'Pterodactyl Server', 'active', 80)
-                # Pterodactyl deployment would go here
-                self._update_deployment_step(deployment_id, 'Pterodactyl Server', 'completed', 100)
+                self._add_log(deployment_id, "Creating Pterodactyl game server...")
+
+                result = self.create_pterodactyl_server(deployment)
+
+                if result['success']:
+                    deployment['pterodactyl_server_id'] = result['server_id']
+                    deployment['pterodactyl_server_uuid'] = result['server_uuid']
+                    self._add_log(deployment_id, f"✓ Server created: {result['server_name']} (ID: {result['server_id']})")
+                    self._update_deployment_step(deployment_id, 'Pterodactyl Server', 'completed', 100)
+                else:
+                    raise Exception(f"Pterodactyl server creation failed: {result['error']}")
+            else:
+                self._add_log(deployment_id, "Skipping Pterodactyl (not configured or no egg selected)")
 
             # Mark as completed
             deployment['status'] = 'completed'
@@ -628,4 +639,160 @@ class DeploymentManager:
             return {'success': False, 'error': error_msg}
         except Exception as e:
             logger.error(f"Unexpected error uploading egg: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def get_pterodactyl_nodes(self) -> List[Dict]:
+        """Get list of Pterodactyl nodes"""
+        config = self.get_config()
+        ptero = config.get('pterodactyl', {})
+
+        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
+            logger.warning("Pterodactyl not configured or not enabled")
+            return []
+
+        try:
+            url = f"{ptero['url'].rstrip('/')}/api/application/nodes"
+            headers = {
+                'Authorization': f"Bearer {ptero['api_key']}",
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            nodes = []
+            for node in data.get('data', []):
+                nodes.append({
+                    'id': node['attributes']['id'],
+                    'name': node['attributes']['name'],
+                    'fqdn': node['attributes']['fqdn'],
+                    'memory': node['attributes']['memory'],
+                    'disk': node['attributes']['disk'],
+                    'allocated_memory': node['attributes']['allocated_resources']['memory'],
+                    'allocated_disk': node['attributes']['allocated_resources']['disk']
+                })
+            return nodes
+        except Exception as e:
+            logger.error(f"Error fetching Pterodactyl nodes: {e}")
+            return []
+
+    def get_pterodactyl_allocations(self, node_id: int) -> List[Dict]:
+        """Get available port allocations for a node"""
+        config = self.get_config()
+        ptero = config.get('pterodactyl', {})
+
+        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
+            logger.warning("Pterodactyl not configured or not enabled")
+            return []
+
+        try:
+            url = f"{ptero['url'].rstrip('/')}/api/application/nodes/{node_id}/allocations"
+            headers = {
+                'Authorization': f"Bearer {ptero['api_key']}",
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            allocations = []
+            for alloc in data.get('data', []):
+                # Only include unassigned allocations
+                if not alloc['attributes']['assigned']:
+                    allocations.append({
+                        'id': alloc['attributes']['id'],
+                        'ip': alloc['attributes']['ip'],
+                        'port': alloc['attributes']['port'],
+                        'alias': alloc['attributes'].get('alias', alloc['attributes']['ip'])
+                    })
+            return allocations
+        except Exception as e:
+            logger.error(f"Error fetching Pterodactyl allocations: {e}")
+            return []
+
+    def create_pterodactyl_server(self, deployment: Dict) -> Dict:
+        """Create a server in Pterodactyl"""
+        config = self.get_config()
+        ptero = config.get('pterodactyl', {})
+
+        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
+            return {'success': False, 'error': 'Pterodactyl not configured or not enabled'}
+
+        try:
+            # Get deployment parameters
+            nest_id = deployment.get('pterodactyl_nest_id')
+            egg_id = deployment.get('pterodactyl_egg_id')
+            node_id = deployment.get('pterodactyl_node_id')
+            allocation_id = deployment.get('pterodactyl_allocation_id')
+
+            if not all([nest_id, egg_id, node_id, allocation_id]):
+                return {'success': False, 'error': 'Missing required Pterodactyl parameters (nest, egg, node, or allocation)'}
+
+            # Prepare server creation payload
+            server_name = f"{deployment.get('subdomain', 'server')}-{deployment.get('game_type', 'game')}"
+
+            payload = {
+                'name': server_name,
+                'user': ptero.get('default_user_id', 1),  # TODO: Make this configurable
+                'egg': egg_id,
+                'docker_image': 'ghcr.io/pterodactyl/yolks:java_17',  # Will be overridden by egg default
+                'startup': '',  # Will use egg default
+                'environment': {},  # Can be customized per deployment
+                'limits': {
+                    'memory': deployment.get('memory_mb', 2048),
+                    'swap': 0,
+                    'disk': deployment.get('disk_mb', 10240),
+                    'io': 500,
+                    'cpu': deployment.get('cpu_limit', 100)
+                },
+                'feature_limits': {
+                    'databases': ptero.get('default_databases', 1),
+                    'backups': ptero.get('default_backups', 2),
+                    'allocations': 1
+                },
+                'allocation': {
+                    'default': allocation_id
+                }
+            }
+
+            url = f"{ptero['url'].rstrip('/')}/api/application/servers"
+            headers = {
+                'Authorization': f"Bearer {ptero['api_key']}",
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+
+            server_data = response.json()
+            server_id = server_data['attributes']['id']
+            server_uuid = server_data['attributes']['uuid']
+
+            logger.info(f"Successfully created Pterodactyl server {server_id} ({server_name})")
+
+            return {
+                'success': True,
+                'message': f'Server {server_name} created successfully',
+                'server_id': server_id,
+                'server_uuid': server_uuid,
+                'server_name': server_name
+            }
+
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error creating Pterodactyl server: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    error_msg = f"Pterodactyl API error: {error_detail.get('errors', [{}])[0].get('detail', str(error_detail))}"
+                except:
+                    error_msg = f"Pterodactyl API error: {e.response.text[:200]}"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+        except Exception as e:
+            logger.error(f"Unexpected error creating Pterodactyl server: {e}")
             return {'success': False, 'error': str(e)}
