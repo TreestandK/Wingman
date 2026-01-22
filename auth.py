@@ -252,7 +252,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Check if auth is enabled
-        auth_enabled = os.environ.get('ENABLE_AUTH', 'false').lower() == 'true'
+        auth_enabled = os.environ.get('ENABLE_AUTH', 'true').lower() == 'true'
         if not auth_enabled:
             return f(*args, **kwargs)
 
@@ -270,7 +270,7 @@ def role_required(allowed_roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Check if auth is enabled
-            auth_enabled = os.environ.get('ENABLE_AUTH', 'false').lower() == 'true'
+            auth_enabled = os.environ.get('ENABLE_AUTH', 'true').lower() == 'true'
             if not auth_enabled:
                 return f(*args, **kwargs)
 
