@@ -679,8 +679,15 @@ class DeploymentManager:
         config = self.get_config()
         ptero = config.get('pterodactyl', {})
 
-        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
-            logger.warning("Pterodactyl not configured or not enabled")
+        # Check for url and api_key (consistent with test_api_connectivity)
+        # The 'enabled' flag is optional - if url and api_key exist, we can fetch nests
+        if not ptero.get('url') or not ptero.get('api_key'):
+            logger.warning("Pterodactyl not configured (missing url or api_key)")
+            return []
+
+        # Log if enabled flag is explicitly set to false
+        if ptero.get('enabled') is False:
+            logger.info("Pterodactyl is disabled in configuration")
             return []
 
         try:
@@ -730,8 +737,11 @@ class DeploymentManager:
         config = self.get_config()
         ptero = config.get('pterodactyl', {})
 
-        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
-            return {'success': False, 'error': 'Pterodactyl not configured or not enabled'}
+        if not ptero.get('url') or not ptero.get('api_key'):
+            return {'success': False, 'error': 'Pterodactyl not configured (missing url or api_key)'}
+
+        if ptero.get('enabled') is False:
+            return {'success': False, 'error': 'Pterodactyl is disabled in configuration'}
 
         try:
             url = f"{ptero['url'].rstrip('/')}/api/application/nests/{nest_id}/eggs"
@@ -775,8 +785,12 @@ class DeploymentManager:
         config = self.get_config()
         ptero = config.get('pterodactyl', {})
 
-        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
-            logger.warning("Pterodactyl not configured or not enabled")
+        if not ptero.get('url') or not ptero.get('api_key'):
+            logger.warning("Pterodactyl not configured (missing url or api_key)")
+            return []
+
+        if ptero.get('enabled') is False:
+            logger.info("Pterodactyl is disabled in configuration")
             return []
 
         try:
@@ -812,8 +826,12 @@ class DeploymentManager:
         config = self.get_config()
         ptero = config.get('pterodactyl', {})
 
-        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
-            logger.warning("Pterodactyl not configured or not enabled")
+        if not ptero.get('url') or not ptero.get('api_key'):
+            logger.warning("Pterodactyl not configured (missing url or api_key)")
+            return []
+
+        if ptero.get('enabled') is False:
+            logger.info("Pterodactyl is disabled in configuration")
             return []
 
         try:
@@ -848,8 +866,11 @@ class DeploymentManager:
         config = self.get_config()
         ptero = config.get('pterodactyl', {})
 
-        if not ptero.get('enabled') or not ptero.get('url') or not ptero.get('api_key'):
-            return {'success': False, 'error': 'Pterodactyl not configured or not enabled'}
+        if not ptero.get('url') or not ptero.get('api_key'):
+            return {'success': False, 'error': 'Pterodactyl not configured (missing url or api_key)'}
+
+        if ptero.get('enabled') is False:
+            return {'success': False, 'error': 'Pterodactyl is disabled in configuration'}
 
         try:
             # Get deployment parameters
