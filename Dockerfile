@@ -1,15 +1,36 @@
-FROM python:alpine
+FROM python:3.11-alpine
 
 LABEL maintainer="Wingman Project"
 LABEL description="Wingman Game Server Manager - Web GUI for automated game server deployments"
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies and build dependencies for Python packages
+RUN apk add --no-cache \
+    # Runtime dependencies
     curl \
-    dnsutils \
+    bind-tools \
     netcat-openbsd \
     jq \
-    && rm -rf /var/lib/apt/lists/*
+    ca-certificates \
+    tzdata \
+    # Required for cryptography, bcrypt, python3-saml
+    libffi \
+    openssl \
+    libxml2 \
+    libxslt \
+    xmlsec \
+    && \
+    # Build dependencies (needed for pip install, removed after)
+    apk add --no-cache --virtual .build-deps \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    python3-dev \
+    libxml2-dev \
+    libxslt-dev \
+    xmlsec-dev \
+    cargo \
+    rust
 
 # Create application directory
 WORKDIR /app
@@ -18,7 +39,9 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    # Remove build dependencies to reduce image size
+    apk del .build-deps
 
 # Copy application files
 COPY app.py .
