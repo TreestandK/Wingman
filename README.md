@@ -80,7 +80,7 @@ kubectl apply -f install.yaml
 # http://your-truenas-ip:30500
 ```
 
-**📖 See [Quick Start Guide](docs/QUICKSTART.md) for detailed 5-minute setup guide**
+**📖 See [Quick Start Guide](QUICK_START.md) for detailed 5-minute setup guide**
 
 ### For Docker Compose Users
 
@@ -107,22 +107,18 @@ docker-compose up -d
 **📖 [View Complete Documentation Index](docs/README.md)**
 
 ### Getting Started
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Get running in 5 minutes ⚡
-- **[Docker Compose Guide](docs/README-DOCKER.md)** - Docker Compose deployment guide
-- **[TrueNAS SCALE Guide](docs/TRUENAS-INSTALL.md)** - Complete TrueNAS SCALE guide
+- **[Quick Start Guide](QUICK_START.md)** - Get running in 5 minutes ⚡
+- **[Docker Guide](docs/DOCKER.md)** - Complete Docker deployment guide
+- **[TrueNAS Guide](docs/TRUENAS.md)** - TrueNAS SCALE installation
+- **[Authentication Setup](docs/AUTHENTICATION.md)** - User management & RBAC
 
-### Advanced
-- **[Building Guide](docs/BUILDING.md)** - Local build and testing guide
-- **[Build & Publish Guide](docs/BUILD-AND-PUBLISH.md)** - Build and publish custom images
-- **[TrueNAS Files Reference](truenas/README.md)** - TrueNAS deployment files reference
+### Features & Integration
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Deploy and manage game servers
+- **[Pterodactyl Integration](docs/PTERODACTYL.md)** - Configure Pterodactyl panel
 
-### Troubleshooting
-- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - General issues and debugging ⭐
-- **[GitHub Actions Troubleshooting](docs/GITHUB-ACTIONS-TROUBLESHOOTING.md)** - CI/CD workflow issues
-- **[Fixes Applied](docs/FIXES-APPLIED.md)** - Known issues and fixes
-
-### API Reference
-- **[API Documentation](docs/API.md)** - REST API documentation *(coming soon)*
+### Troubleshooting & Support
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions ⭐
+- **[TrueNAS Files Reference](truenas/README.md)** - Kubernetes deployment files
 
 ---
 
@@ -168,7 +164,7 @@ docker-compose up -d
 - Web GUI configuration
 - High availability support
 
-**Installation:** See [TrueNAS SCALE Guide](docs/TRUENAS-INSTALL.md)
+**Installation:** See [TrueNAS Guide](docs/TRUENAS.md)
 
 ### Option 2: Docker Compose (Recommended for Testing)
 
@@ -178,7 +174,7 @@ docker-compose up -d
 - Local development
 - Volume persistence
 
-**Installation:** See [Docker Compose Guide](docs/README-DOCKER.md)
+**Installation:** See [Docker Guide](docs/DOCKER.md)
 
 ### Option 3: Manual Installation
 
@@ -262,8 +258,6 @@ docker-compose pull
 # Restart with new image
 docker-compose up -d
 ```
-
-**📖 See [Build & Publish Guide](docs/BUILD-AND-PUBLISH.md) for CI/CD setup**
 
 ---
 
@@ -394,10 +388,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 ### Documentation
-- [Quick Start Guide](docs/QUICKSTART.md)
-- [TrueNAS Installation](docs/TRUENAS-INSTALL.md)
-- [Docker Deployment](docs/README-DOCKER.md)
-- [Building Images](docs/BUILD-AND-PUBLISH.md)
+- [Quick Start Guide](QUICK_START.md)
+- [TrueNAS Installation](docs/TRUENAS.md)
+- [Docker Deployment](docs/DOCKER.md)
+- [Authentication Setup](docs/AUTHENTICATION.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
 
 ### Troubleshooting
 
