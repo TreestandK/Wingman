@@ -209,6 +209,24 @@ body {
     height: 18px;
 }
 
+/* Form Row - Two Column Layout */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 10px;
+}
+
+.form-row .form-group {
+    margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Collapsible Sections */
 .collapsible h3 {
     cursor: pointer;
