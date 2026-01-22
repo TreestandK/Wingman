@@ -49,7 +49,7 @@ class AuthManager:
         self.users_file = os.path.join(data_dir, 'users.json')
         self.audit_log_file = os.path.join(data_dir, 'audit.log')
         self.users: Dict[str, User] = {}
-        self.auth_enabled = os.environ.get('ENABLE_AUTH', 'false').lower() == 'true'
+        self.auth_enabled = os.environ.get('ENABLE_AUTH', 'true').lower() == 'true'  # Default: enabled
         self.saml_enabled = os.environ.get('ENABLE_SAML', 'false').lower() == 'true'
         self._load_users()
         self._ensure_admin_exists()
