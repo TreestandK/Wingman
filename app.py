@@ -34,8 +34,11 @@ auth_manager = AuthManager()
 @app.route('/')
 def index():
     """Main dashboard - redirect to login if auth enabled and not authenticated"""
+    logger.info(f"Index route accessed: auth_enabled={auth_manager.auth_enabled}, username_in_session={'username' in session}")
     if auth_manager.auth_enabled and 'username' not in session:
+        logger.info("Redirecting to login page")
         return redirect(url_for('login'))
+    logger.info("Serving index.html")
     return render_template('index.html')
 
 @app.route('/login', methods=['GET'])
