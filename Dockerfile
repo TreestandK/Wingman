@@ -27,6 +27,7 @@ COPY auth.py .
 COPY rbac.py .
 COPY errors.py .
 COPY create_admin.py .
+COPY test_auth.py .
 
 # Create directories
 RUN mkdir -p /app/data /app/logs /app/templates/saved /app/templates/html /app/static
