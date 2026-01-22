@@ -751,6 +751,34 @@ document.getElementById('ptero-node')?.addEventListener('change', async function
     }
 });
 
+// Update subdomain preview
+document.getElementById('subdomain')?.addEventListener('input', function(e) {
+    const preview = document.getElementById('subdomain-preview');
+    if (preview) {
+        preview.textContent = e.target.value || 'minecraft';
+    }
+});
+
+// Auto-fill game port based on game type
+document.getElementById('game-type')?.addEventListener('change', function(e) {
+    const portInput = document.getElementById('game-port');
+    const defaultPorts = {
+        'minecraft_java': 25565,
+        'minecraft_bedrock': 19132,
+        'valheim': 2456,
+        'terraria': 7777,
+        'palworld': 8211,
+        'rust': 28015,
+        'ark': 7777,
+        'custom': ''
+    };
+
+    const port = defaultPorts[e.target.value];
+    if (port && portInput && !portInput.value) {
+        portInput.value = port;
+    }
+});
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Load initial stats
