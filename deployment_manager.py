@@ -12,6 +12,7 @@ import threading
 from datetime import datetime
 from typing import Dict, List, Optional
 import time
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -297,6 +298,19 @@ class DeploymentManager:
         results['success'] = all(v in [True, None] for v in results['tests'].values())
         return results
 
+    _SAFE_TEMPLATE_NAME = re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
+
+    def _template_path(self, name: str) -> Path:
+        """Resolve a template path safely to prevent path traversal."""
+        if not name or not self._SAFE_TEMPLATE_NAME.match(name):
+            raise ValueError('Invalid template name (allowed: a-zA-Z0-9_- up to 64 chars)')
+
+        base = Path(self.templates_dir).resolve()
+        path = (base / f"{name}.json").resolve()
+        if base not in path.parents and path != base:
+            raise ValueError('Invalid template path')
+        return path
+
     def list_templates(self) -> List[Dict]:
         """List available templates"""
         templates = []
@@ -314,8 +328,8 @@ class DeploymentManager:
     def get_template(self, name: str) -> Optional[Dict]:
         """Get a specific template"""
         try:
-            filepath = os.path.join(self.templates_dir, f"{name}.json")
-            if os.path.exists(filepath):
+            filepath = self._template_path(name)
+            if filepath.exists():
                 with open(filepath, 'r') as f:
                     return json.load(f)
         except Exception as e:
@@ -329,7 +343,7 @@ class DeploymentManager:
             if not name:
                 return {'success': False, 'error': 'Template name is required'}
 
-            filepath = os.path.join(self.templates_dir, f"{name}.json")
+            filepath = self._template_path(name)
             with open(filepath, 'w') as f:
                 json.dump(template_data, f, indent=2)
 

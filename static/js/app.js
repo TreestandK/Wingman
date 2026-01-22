@@ -51,6 +51,17 @@ function showToast(message, type = 'success') {
     }, 4000);
 }
 
+// Basic HTML escaping to prevent XSS when rendering untrusted data
+function esc(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+
 // Collapsible Sections
 function toggleSection(element) {
     const section = element.parentElement;
@@ -223,18 +234,18 @@ async function loadDeployments() {
         if (result.success && result.deployments.length > 0) {
             listDiv.innerHTML = result.deployments.map(dep => `
                 <div class="deployment-card">
-                    <h4><i class="fas fa-server"></i> ${dep.subdomain}.${dep.domain || 'yourdomain.com'}</h4>
-                    <p>Server: ${dep.server_ip}:${dep.game_port}</p>
+                    <h4><i class="fas fa-server"></i> ${esc(dep.subdomain)}.${esc(dep.domain || 'yourdomain.com')}</h4>
+                    <p>Server: ${esc(dep.server_ip)}:${esc(dep.game_port)}</p>
                     <div class="deployment-meta">
                         <span><i class="fas fa-gamepad"></i> ${dep.game_type}</span>
                         <span><i class="fas fa-calendar"></i> ${new Date(dep.created_at).toLocaleString()}</span>
-                        <span class="status-badge ${dep.status}">${dep.status}</span>
+                        <span class="status-badge ${esc(dep.status)}">${esc(dep.status)}</span>
                     </div>
                     <div class="deployment-actions">
-                        <button class="btn btn-secondary" onclick="viewLogs('${dep.deployment_id}')">
+                        <button class="btn btn-secondary" onclick="viewLogs('${esc(dep.deployment_id)}')">
                             <i class="fas fa-file-alt"></i> Logs
                         </button>
-                        <button class="btn btn-danger" onclick="rollbackDeployment('${dep.deployment_id}')">
+                        <button class="btn btn-danger" onclick="rollbackDeployment('${esc(dep.deployment_id)}')">
                             <i class="fas fa-undo"></i> Rollback
                         </button>
                     </div>
@@ -260,13 +271,13 @@ async function loadTemplates() {
         if (result.success && result.templates.length > 0) {
             listDiv.innerHTML = result.templates.map(tpl => `
                 <div class="template-card">
-                    <h4><i class="fas fa-file-code"></i> ${tpl.name}</h4>
+                    <h4><i class="fas fa-file-code"></i> ${esc(tpl.name)}</h4>
                     <p>Port: ${tpl.game_port} | Memory: ${tpl.memory}MB | Disk: ${tpl.disk}MB</p>
                     <div class="template-actions">
-                        <button class="btn btn-primary" onclick="useTemplate('${tpl.name}')">
+                        <button class="btn btn-primary" onclick="useTemplate('${esc(tpl.name)}')">
                             <i class="fas fa-rocket"></i> Use Template
                         </button>
-                        <button class="btn btn-danger" onclick="deleteTemplate('${tpl.name}')">
+                        <button class="btn btn-danger" onclick="deleteTemplate('${esc(tpl.name)}')">
                             <i class="fas fa-trash"></i> Delete
                         </button>
                     </div>

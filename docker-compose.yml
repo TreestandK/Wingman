@@ -40,7 +40,7 @@ services:
       - ENABLE_MONITORING=${ENABLE_MONITORING:-false}
 
       # Application Settings
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-please-change-this-secret-key}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}  # REQUIRED: 32+ chars
     volumes:
       - wingman-data:/app/data
       - wingman-logs:/app/logs

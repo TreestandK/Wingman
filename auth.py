@@ -100,18 +100,20 @@ class AuthManager:
         """Ensure at least one admin user exists"""
         try:
             if not self.users and self.auth_enabled:
-                # Create default admin with password from env or default
-                default_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+                # Create initial admin only if explicitly configured (prevents insecure defaults)
+                default_password = os.environ.get('ADMIN_PASSWORD')
+                if not default_password:
+                    raise RuntimeError('ADMIN_PASSWORD must be set for first-run admin bootstrap')
+                if len(default_password) < 14:
+                    raise RuntimeError('ADMIN_PASSWORD must be at least 14 characters')
                 result = self.create_user('admin', default_password, 'admin', 'admin@localhost')
                 if result.get('success'):
-                    logger.warning("=" * 60)
-                    logger.warning("CREATED DEFAULT ADMIN USER - CHANGE PASSWORD IMMEDIATELY!")
-                    logger.warning(f"Username: admin")
-                    logger.warning(f"Password: {default_password}")
-                    logger.warning("Run: docker exec -it <container> python create_admin.py")
-                    logger.warning("=" * 60)
+                    logger.warning('=' * 60)
+                    logger.warning("CREATED INITIAL ADMIN USER 'admin' - CHANGE PASSWORD IMMEDIATELY!")
+                    logger.warning('Password was NOT logged for security.')
+                    logger.warning('=' * 60)
                 else:
-                    logger.error(f"Failed to create default admin user: {result.get('error')}")
+                    logger.error("Failed to create initial admin user: %s" % result.get('error'))
         except Exception as e:
             logger.error(f"Error in _ensure_admin_exists: {e}")
             # Don't crash the app, just log the error

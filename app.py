@@ -5,6 +5,8 @@ Flask application for managing game server deployments
 """
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import json
 import logging
@@ -14,7 +16,20 @@ from auth import AuthManager, login_required, role_required
 from errors import WingmanError, handle_api_error
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
+secret = os.environ.get('FLASK_SECRET_KEY')
+if not secret or len(secret) < 32:
+    raise RuntimeError('FLASK_SECRET_KEY must be set to a strong random value (>=32 chars)')
+app.secret_key = secret
+
+# Session cookie hardening (set SESSION_COOKIE_SECURE=true when behind HTTPS)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Strict',
+    SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true',
+)
+
+# Basic rate limiting (tune as needed)
+limiter = Limiter(get_remote_address, app=app, default_limits=['200 per minute'])
 
 # Configure logging
 logging.basicConfig(
@@ -73,6 +88,7 @@ def login():
     }
 
 @app.route('/api/auth/login', methods=['POST'])
+@limiter.limit('10 per minute')
 def api_login():
     """Authenticate user"""
     try:
@@ -131,8 +147,11 @@ def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
 @app.route('/api/auth/debug', methods=['GET'])
+@role_required(['admin'])
 def auth_debug():
     """Debug endpoint to troubleshoot auth issues"""
+    if os.environ.get('WINGMAN_DEBUG_ENDPOINTS', 'false').lower() != 'true':
+        return jsonify({'success': False, 'error': 'Not found'}), 404
     return jsonify({
         'auth_manager': {
             'auth_enabled': auth_manager.auth_enabled,
@@ -156,6 +175,7 @@ def auth_debug():
     })
 
 @app.route('/api/config', methods=['GET'])
+@role_required(['admin'])
 @login_required
 def get_config():
     """Get current configuration"""
@@ -169,6 +189,7 @@ def get_config():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/config', methods=['POST'])
+@role_required(['admin'])
 def save_config():
     """Save configuration settings"""
     try:
@@ -180,6 +201,7 @@ def save_config():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/config/validate', methods=['POST'])
+@role_required(['admin'])
 def validate_config():
     """Validate configuration settings"""
     try:
@@ -191,17 +213,19 @@ def validate_config():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/config/test', methods=['POST'])
+@role_required(['admin'])
 def test_connectivity():
     """Test API connectivity"""
     try:
-        config = request.json
-        test_results = deployment_manager.test_api_connectivity(config)
+        # Use saved configuration to avoid SSRF via user-supplied URLs
+        test_results = deployment_manager.test_api_connectivity()
         return jsonify(test_results)
     except Exception as e:
         logger.error(f"Connectivity test error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/templates', methods=['GET'])
+@login_required
 def list_templates():
     """List available deployment templates"""
     try:
@@ -212,6 +236,7 @@ def list_templates():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/templates/<name>', methods=['GET'])
+@login_required
 def get_template(name):
     """Get a specific template"""
     try:
@@ -224,6 +249,7 @@ def get_template(name):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/templates', methods=['POST'])
+@role_required(['admin'])
 def save_template():
     """Save a deployment template"""
     try:
@@ -235,6 +261,7 @@ def save_template():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/deploy', methods=['POST'])
+@role_required(['admin','operator'])
 def deploy_server():
     """Deploy a new game server"""
     try:
@@ -250,6 +277,7 @@ def deploy_server():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/deploy/<deployment_id>/status', methods=['GET'])
+@login_required
 def deployment_status(deployment_id):
     """Get deployment status"""
     try:
@@ -262,6 +290,7 @@ def deployment_status(deployment_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/deployments', methods=['GET'])
+@login_required
 def list_deployments():
     """List all deployments"""
     try:
@@ -272,6 +301,7 @@ def list_deployments():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/deploy/<deployment_id>/rollback', methods=['POST'])
+@role_required(['admin','operator'])
 def rollback_deployment(deployment_id):
     """Rollback a deployment"""
     try:
@@ -282,6 +312,7 @@ def rollback_deployment(deployment_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/logs/<deployment_id>', methods=['GET'])
+@login_required
 def get_deployment_logs(deployment_id):
     """Get deployment logs"""
     try:
@@ -292,6 +323,7 @@ def get_deployment_logs(deployment_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/monitoring/stats', methods=['GET'])
+@login_required
 def get_monitoring_stats():
     """Get monitoring statistics"""
     try:
@@ -302,6 +334,7 @@ def get_monitoring_stats():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/pterodactyl/nests', methods=['GET'])
+@role_required(['admin','operator'])
 def get_pterodactyl_nests():
     """Get Pterodactyl nests"""
     try:
@@ -312,6 +345,7 @@ def get_pterodactyl_nests():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/pterodactyl/eggs', methods=['GET'])
+@role_required(['admin','operator'])
 def get_pterodactyl_eggs():
     """Get all Pterodactyl eggs"""
     try:
@@ -322,6 +356,7 @@ def get_pterodactyl_eggs():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/pterodactyl/eggs/upload', methods=['POST'])
+@role_required(['admin','operator'])
 def upload_pterodactyl_egg():
     """Upload a new egg to Pterodactyl"""
     try:
@@ -339,6 +374,7 @@ def upload_pterodactyl_egg():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/pterodactyl/nodes', methods=['GET'])
+@role_required(['admin','operator'])
 def get_pterodactyl_nodes():
     """Get Pterodactyl nodes"""
     try:
@@ -349,6 +385,7 @@ def get_pterodactyl_nodes():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/pterodactyl/nodes/<int:node_id>/allocations', methods=['GET'])
+@role_required(['admin','operator'])
 def get_pterodactyl_allocations(node_id):
     """Get available allocations for a node"""
     try:
