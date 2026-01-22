@@ -23,6 +23,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY app.py .
 COPY deployment_manager.py .
+COPY auth.py .
+COPY rbac.py .
+COPY errors.py .
+COPY create_admin.py .
 
 # Create directories
 RUN mkdir -p /app/data /app/logs /app/templates/saved /app/templates/html /app/static
