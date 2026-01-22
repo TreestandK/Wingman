@@ -2,7 +2,45 @@
 
 ## Quick Debug Steps
 
-### Step 1: Check Container Status
+### Step 1: Use the New Debug Endpoint
+
+**NEW!** We added a comprehensive debug endpoint:
+
+```bash
+curl http://localhost:5000/api/auth/debug | python -m json.tool
+```
+
+This shows:
+- Current `auth_enabled` value and its type
+- Number of users
+- Environment variables (ENABLE_AUTH, ENABLE_SAML)
+- Session information
+- AuthManager instance ID
+
+**Expected output when auth is enabled:**
+```json
+{
+  "auth_manager": {
+    "auth_enabled": true,
+    "auth_enabled_type": "bool",
+    "saml_enabled": false,
+    "users_count": 1,
+    "users": ["admin"]
+  },
+  "environment": {
+    "ENABLE_AUTH": "NOT SET",
+    "ENABLE_SAML": "NOT SET",
+    "FLASK_SECRET_KEY_LENGTH": 32
+  },
+  "session": {
+    "authenticated": false,
+    "username": null,
+    "role": null
+  }
+}
+```
+
+### Step 2: Check Container Status
 
 ```bash
 docker ps -a | grep wingman
@@ -12,17 +50,30 @@ If the container is:
 - **Exited/Crashed**: There's a startup error
 - **Running**: Network/port issue
 
-### Step 2: Check Container Logs
+### Step 3: Check Container Logs for Auth Initialization
+
+**NEW!** Look for the initialization message:
 
 ```bash
+# Look for the AuthManager initialization log
+docker logs wingman 2>&1 | grep "AuthManager initialized"
+
+# Expected output:
+# INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+```
+
+If you see `auth_enabled=False`, that's the problem!
+
+**Full container logs:**
+```bash
 # View all logs
-docker logs wingman-gameserver-manager
+docker logs wingman
 
 # Follow logs in real-time
-docker logs -f wingman-gameserver-manager
+docker logs -f wingman
 
 # Last 50 lines
-docker logs --tail 50 wingman-gameserver-manager
+docker logs --tail 50 wingman
 ```
 
 Look for errors mentioning:
@@ -30,6 +81,7 @@ Look for errors mentioning:
 - `Permission denied`
 - `OSError`
 - `Failed to initialize`
+- `AuthManager initialized` (this is the key line!)
 
 ### Step 3: Run Auth Test Script
 
