@@ -288,6 +288,39 @@
             <div id="sso-buttons" class="sso-buttons"></div>
         </div>
 
+        <!-- Password Change Form (shown when must_change_password is true) -->
+        <form id="changePasswordForm" style="display: none;">
+            <div class="form-group">
+                <label for="currentPassword">Current Password / Setup Token</label>
+                <div class="input-icon">
+                    <i class="fas fa-key"></i>
+                    <input type="password" id="currentPassword" name="currentPassword" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="newPassword">New Password</label>
+                <div class="input-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="newPassword" name="newPassword" required minlength="12">
+                </div>
+                <small style="color: #999; font-size: 12px;">Min 12 chars, uppercase, lowercase, number, special char</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm New Password</label>
+                <div class="input-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="12">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="changeBtn">
+                <span id="changeBtnText">Set New Password</span>
+                <div class="spinner" id="changeSpinner"></div>
+            </button>
+        </form>
+
         <div class="login-footer">
             <p>&copy; 2024 Wingman Project</p>
         </div>
@@ -341,10 +374,25 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert('Login successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 500);
+                    if (data.must_change_password) {
+                        // Show password change form
+                        showAlert('You must set a new password to continue.', 'success');
+                        document.getElementById('loginForm').style.display = 'none';
+                        document.getElementById('sso-section').style.display = 'none';
+                        document.getElementById('changePasswordForm').style.display = 'block';
+                        document.getElementById('currentPassword').value = password;
+                        document.getElementById('newPassword').focus();
+                        setLoading(false);
+                        // Store username for password change
+                        window.pendingUsername = username;
+                        // Update header text
+                        document.querySelector('.login-header p').textContent = 'Set Your New Password';
+                    } else {
+                        showAlert('Login successful! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 500);
+                    }
                 } else {
                     showAlert(data.error || 'Login failed', 'error');
                     setLoading(false);
@@ -353,6 +401,78 @@
                 showAlert('Network error. Please try again.', 'error');
                 setLoading(false);
             }
+        });
+
+        // Password change form handler
+        const changePasswordForm = document.getElementById('changePasswordForm');
+        const changeBtn = document.getElementById('changeBtn');
+        const changeBtnText = document.getElementById('changeBtnText');
+        const changeSpinner = document.getElementById('changeSpinner');
+
+        function setChangeLoading(loading) {
+            changeBtn.disabled = loading;
+            if (loading) {
+                changeBtnText.style.display = 'none';
+                changeSpinner.style.display = 'block';
+            } else {
+                changeBtnText.style.display = 'block';
+                changeSpinner.style.display = 'none';
+            }
+        }
+
+        changePasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                showAlert('Passwords do not match', 'error');
+                return;
+            }
+
+            if (newPassword.length < 12) {
+                showAlert('Password must be at least 12 characters', 'error');
+                return;
+            }
+
+            setChangeLoading(true);
+
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: window.pendingUsername,
+                        old_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Password changed successfully! Please log in with your new password.', 'success');
+                    // Show login form again
+                    setTimeout(() => {
+                        document.getElementById('changePasswordForm').style.display = 'none';
+                        document.getElementById('loginForm').style.display = 'block';
+                        document.getElementById('password').value = '';
+                        document.querySelector('.login-header p').textContent = 'Game Server Manager';
+                        hideAlert();
+                    }, 2000);
+                } else {
+                    showAlert(data.error || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.', 'error');
+            }
+
+            setChangeLoading(false);
         });
 
         // Enter key support

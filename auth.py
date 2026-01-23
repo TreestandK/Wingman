@@ -58,20 +58,39 @@ class AuthManager:
             admin_count = User.query.filter_by(role='admin', is_active=True).count()
 
             if admin_count == 0:
-                # Create initial admin only if explicitly configured
-                default_password = os.environ.get('ADMIN_PASSWORD')
-                if not default_password:
-                    logger.warning('No admin users exist and ADMIN_PASSWORD not set - skipping bootstrap')
-                    return
-                if len(default_password) < 14:
-                    raise RuntimeError('ADMIN_PASSWORD must be at least 14 characters')
+                import secrets
+                # Generate a secure one-time setup token
+                setup_token = secrets.token_urlsafe(24)
 
-                result = self.create_user('admin', default_password, 'admin', 'admin@localhost')
+                result = self.create_user('admin', setup_token, 'admin', 'admin@localhost',
+                                         skip_password_validation=True)
                 if result.get('success'):
-                    logger.warning('=' * 60)
-                    logger.warning("CREATED INITIAL ADMIN USER 'admin' - CHANGE PASSWORD IMMEDIATELY!")
-                    logger.warning('Password was NOT logged for security.')
-                    logger.warning('=' * 60)
+                    # Mark that password must be changed on first login
+                    user = User.query.filter_by(username='admin').first()
+                    if user:
+                        user.must_change_password = True
+                        self._get_db().session.commit()
+
+                    logger.warning('=' * 70)
+                    logger.warning('')
+                    logger.warning('  INITIAL ADMIN SETUP')
+                    logger.warning('')
+                    logger.warning('  Username: admin')
+                    logger.warning(f'  One-time token: {setup_token}')
+                    logger.warning('')
+                    logger.warning('  Login with this token and set a new password.')
+                    logger.warning('  This token will only be shown once!')
+                    logger.warning('')
+                    logger.warning('=' * 70)
+
+                    # Also print to stdout for docker logs visibility
+                    print('\n' + '=' * 70)
+                    print('\n  INITIAL ADMIN SETUP\n')
+                    print('  Username: admin')
+                    print(f'  One-time token: {setup_token}\n')
+                    print('  Login with this token and set a new password.')
+                    print('  This token will only be shown once!\n')
+                    print('=' * 70 + '\n')
                 else:
                     logger.error("Failed to create initial admin user: %s" % result.get('error'))
         except Exception as e:
@@ -158,6 +177,7 @@ class AuthManager:
                 # Return user dict with session_version for session tracking
                 user_dict = user.to_dict()
                 user_dict['session_version'] = user.session_version
+                user_dict['must_change_password'] = user.must_change_password or False
                 return user_dict
             else:
                 # Record failed login attempt
@@ -201,6 +221,7 @@ class AuthManager:
                 return {'success': False, 'error': errors[0], 'password_errors': errors}
 
             user.set_password(new_password)
+            user.must_change_password = False  # Clear forced password change flag
             db.session.commit()
 
             self._audit_log('password_changed', username, 'Password changed successfully')

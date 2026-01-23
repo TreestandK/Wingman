@@ -125,8 +125,8 @@ def enforce_csrf_for_cookie_sessions():
         if auth.lower().startswith('bearer '):
             return  # API token auth: CSRF not applicable
         # If using session cookies, require CSRF token
-        # Allow login/logout routes to proceed without CSRF to avoid bootstrapping issues.
-        if request.path in ('/login', '/api/auth/login') or request.path.startswith('/static/'):
+        # Allow login/logout and password change routes to proceed without CSRF to avoid bootstrapping issues.
+        if request.path in ('/login', '/api/auth/login', '/api/auth/change-password') or request.path.startswith('/static/'):
             return
         expected = session.get('csrf_token')
         provided = request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken')
@@ -296,10 +296,18 @@ def api_login():
 
             csrf_token = _ensure_csrf_token()
             logger.info(f"User {username} logged in successfully")
+
+            # Check if password change is required
+            must_change_password = user.get('must_change_password', False)
+            if must_change_password:
+                session['must_change_password'] = True
+                logger.info(f"User {username} must change password on first login")
+
             return jsonify({
                 'success': True,
                 'user': user,
-                'csrf_token': csrf_token
+                'csrf_token': csrf_token,
+                'must_change_password': must_change_password
             })
         else:
             return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
@@ -314,6 +322,31 @@ def api_logout():
     session.clear()
     logger.info(f"User {username} logged out")
     return jsonify({'success': True, 'message': 'Logged out successfully'})
+
+@app.route('/api/auth/change-password', methods=['POST'])
+@limiter.limit('5 per minute')
+def api_change_password():
+    """Change user password (used for forced password change on first login)"""
+    try:
+        data = request.json
+        username = data.get('username')
+        old_password = data.get('old_password')
+        new_password = data.get('new_password')
+
+        if not username or not old_password or not new_password:
+            return jsonify({'success': False, 'error': 'All fields are required'}), 400
+
+        result = auth_manager.change_password(username, old_password, new_password)
+
+        if result.get('success'):
+            # Clear the session after password change
+            session.clear()
+            logger.info(f"User {username} changed password successfully")
+
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Password change error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/auth/status', methods=['GET'])
 def auth_status():

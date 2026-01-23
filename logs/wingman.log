@@ -40,3 +40,69 @@
 2026-01-23 05:23:40,367 - app - INFO - User admin logged out
 2026-01-23 05:42:54,169 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
 2026-01-23 05:47:18,175 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:00:06,118 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:00:06,424 - auth - WARNING - ======================================================================
+2026-01-23 06:00:06,424 - auth - WARNING - 
+2026-01-23 06:00:06,424 - auth - WARNING -   INITIAL ADMIN SETUP
+2026-01-23 06:00:06,424 - auth - WARNING - 
+2026-01-23 06:00:06,424 - auth - WARNING -   Username: admin
+2026-01-23 06:00:06,424 - auth - WARNING -   One-time token: whYrO3gJTqo1pMNlvy95Ee3lxW8l5ciA
+2026-01-23 06:00:06,424 - auth - WARNING - 
+2026-01-23 06:00:06,424 - auth - WARNING -   Login with this token and set a new password.
+2026-01-23 06:00:06,424 - auth - WARNING -   This token will only be shown once!
+2026-01-23 06:00:06,424 - auth - WARNING - 
+2026-01-23 06:00:06,424 - auth - WARNING - ======================================================================
+2026-01-23 06:00:15,682 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:00:15,971 - auth - WARNING - ======================================================================
+2026-01-23 06:00:15,971 - auth - WARNING - 
+2026-01-23 06:00:15,971 - auth - WARNING -   INITIAL ADMIN SETUP
+2026-01-23 06:00:15,971 - auth - WARNING - 
+2026-01-23 06:00:15,971 - auth - WARNING -   Username: admin
+2026-01-23 06:00:15,971 - auth - WARNING -   One-time token: 8rraN8gVZ4rXKumfTUht8_cdIHH1_Una
+2026-01-23 06:00:15,972 - auth - WARNING - 
+2026-01-23 06:00:15,972 - auth - WARNING -   Login with this token and set a new password.
+2026-01-23 06:00:15,972 - auth - WARNING -   This token will only be shown once!
+2026-01-23 06:00:15,972 - auth - WARNING - 
+2026-01-23 06:00:15,972 - auth - WARNING - ======================================================================
+2026-01-23 06:00:27,189 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:00:27,481 - auth - WARNING - ======================================================================
+2026-01-23 06:00:27,482 - auth - WARNING - 
+2026-01-23 06:00:27,482 - auth - WARNING -   INITIAL ADMIN SETUP
+2026-01-23 06:00:27,482 - auth - WARNING - 
+2026-01-23 06:00:27,482 - auth - WARNING -   Username: admin
+2026-01-23 06:00:27,482 - auth - WARNING -   One-time token: 6PAIoN4z20TyWf09Otsb-_KRHR-qk6BN
+2026-01-23 06:00:27,482 - auth - WARNING - 
+2026-01-23 06:00:27,482 - auth - WARNING -   Login with this token and set a new password.
+2026-01-23 06:00:27,482 - auth - WARNING -   This token will only be shown once!
+2026-01-23 06:00:27,482 - auth - WARNING - 
+2026-01-23 06:00:27,482 - auth - WARNING - ======================================================================
+2026-01-23 06:00:44,488 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:00:44,777 - auth - WARNING - ======================================================================
+2026-01-23 06:00:44,777 - auth - WARNING - 
+2026-01-23 06:00:44,777 - auth - WARNING -   INITIAL ADMIN SETUP
+2026-01-23 06:00:44,777 - auth - WARNING - 
+2026-01-23 06:00:44,777 - auth - WARNING -   Username: admin
+2026-01-23 06:00:44,777 - auth - WARNING -   One-time token: RfYaboAFezhxxgzWacLT-Vo_G_UOqyxK
+2026-01-23 06:00:44,777 - auth - WARNING - 
+2026-01-23 06:00:44,777 - auth - WARNING -   Login with this token and set a new password.
+2026-01-23 06:00:44,778 - auth - WARNING -   This token will only be shown once!
+2026-01-23 06:00:44,778 - auth - WARNING - 
+2026-01-23 06:00:44,778 - auth - WARNING - ======================================================================
+2026-01-23 06:00:45,342 - app - INFO - User admin logged in successfully
+2026-01-23 06:00:45,342 - app - INFO - User admin must change password on first login
+2026-01-23 06:01:07,599 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:01:07,887 - auth - WARNING - ======================================================================
+2026-01-23 06:01:07,887 - auth - WARNING - 
+2026-01-23 06:01:07,887 - auth - WARNING -   INITIAL ADMIN SETUP
+2026-01-23 06:01:07,887 - auth - WARNING - 
+2026-01-23 06:01:07,887 - auth - WARNING -   Username: admin
+2026-01-23 06:01:07,887 - auth - WARNING -   One-time token: GehZpZJBSX6O_rKnM2A19cWiJEklFqhO
+2026-01-23 06:01:07,887 - auth - WARNING - 
+2026-01-23 06:01:07,887 - auth - WARNING -   Login with this token and set a new password.
+2026-01-23 06:01:07,888 - auth - WARNING -   This token will only be shown once!
+2026-01-23 06:01:07,888 - auth - WARNING - 
+2026-01-23 06:01:07,888 - auth - WARNING - ======================================================================
+2026-01-23 06:01:08,450 - app - INFO - User admin logged in successfully
+2026-01-23 06:01:08,450 - app - INFO - User admin must change password on first login
+2026-01-23 06:01:08,989 - app - INFO - User admin changed password successfully
+2026-01-23 06:01:09,263 - app - INFO - User admin logged in successfully

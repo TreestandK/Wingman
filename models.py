@@ -42,6 +42,9 @@ class User(db.Model):
     # Security: Password change tracking
     password_changed_at = db.Column(db.DateTime, nullable=True)
 
+    # Security: Force password change on first login
+    must_change_password = db.Column(db.Boolean, default=False)
+
     # Profile fields from OIDC
     display_name = db.Column(db.String(200), nullable=True)
     avatar_url = db.Column(db.String(500), nullable=True)
@@ -108,6 +111,7 @@ class User(db.Model):
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'password_changed_at': self.password_changed_at.isoformat() if self.password_changed_at else None,
             'display_name': self.display_name,
+            'must_change_password': self.must_change_password or False,
         }
 
     def __repr__(self):
