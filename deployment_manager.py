@@ -17,6 +17,21 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+def _redact_secrets(config: Dict) -> Dict:
+    """Redact sensitive information from configuration for logging"""
+    redacted = json.loads(json.dumps(config))  # Deep copy
+    
+    # Redact sensitive fields
+    sensitive_fields = ['api_token', 'api_key', 'password', 'pass']
+    
+    for key, value in redacted.items():
+        if isinstance(value, dict):
+            for subkey in value:
+                if any(sensitive in subkey.lower() for sensitive in sensitive_fields):
+                    value[subkey] = '***REDACTED***'
+    
+    return redacted
+
 class DeploymentManager:
     """Manages game server deployments"""
 
@@ -237,7 +252,7 @@ class DeploymentManager:
         # Test UniFi
         if cfg.get('unifi', {}).get('url'):
             try:
-                verify_ssl = cfg.get('unifi', {}).get('verify_ssl', False)
+                verify_ssl = cfg.get('unifi', {}).get('verify_ssl', True)
                 response = requests.get(cfg['unifi']['url'], verify=verify_ssl, timeout=5)
                 results['tests']['UniFi'] = True
                 results['details']['UniFi'] = 'Controller reachable'
@@ -648,7 +663,7 @@ class DeploymentManager:
 
         try:
             logger.info(f"Saving configuration to {config_file}")
-            logger.debug(f"Config data: {json.dumps(config, indent=2)}")
+            logger.debug("Config data (redacted): %s", json.dumps(_redact_secrets(config), indent=2))
 
             # Add enabled flags if not present
             if 'cloudflare' in config and 'enabled' not in config['cloudflare']:

@@ -257,6 +257,10 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         # Check if auth is enabled
         auth_enabled = os.environ.get('ENABLE_AUTH', 'true').lower() == 'true'
+        wingman_env = os.environ.get('WINGMAN_ENV', 'prod').lower()
+        # Fail-closed outside dev: never silently bypass access control
+        if not auth_enabled and wingman_env != 'dev':
+            return jsonify({'success': False, 'error': 'Authentication disabled'}), 503
         if not auth_enabled:
             return f(*args, **kwargs)
 
@@ -275,6 +279,10 @@ def role_required(allowed_roles):
         def decorated_function(*args, **kwargs):
             # Check if auth is enabled
             auth_enabled = os.environ.get('ENABLE_AUTH', 'true').lower() == 'true'
+            wingman_env = os.environ.get('WINGMAN_ENV', 'prod').lower()
+            # Fail-closed outside dev: never silently bypass access control
+            if not auth_enabled and wingman_env != 'dev':
+                return jsonify({'success': False, 'error': 'Authentication disabled'}), 503
             if not auth_enabled:
                 return f(*args, **kwargs)
 

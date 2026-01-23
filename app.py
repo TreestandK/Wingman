@@ -11,25 +11,46 @@ from flask_limiter.util import get_remote_address
 import os
 import json
 import logging
+import hmac
+import secrets
 from datetime import datetime
+from werkzeug.middleware.proxy_fix import ProxyFix
 from deployment_manager import DeploymentManager
 from auth import AuthManager, login_required, role_required
 from errors import WingmanError, handle_api_error
 
 app = Flask(__name__)
+
+# Deployment mode: dev vs prod (default prod)
+WINGMAN_ENV = os.environ.get('WINGMAN_ENV', 'prod').lower()
+AUTH_ENABLED = os.environ.get('ENABLE_AUTH', 'true').lower() == 'true'
+
+# Fail-closed: never allow auth to be disabled outside dev
+if WINGMAN_ENV != 'dev' and not AUTH_ENABLED:
+    raise RuntimeError('ENABLE_AUTH=false is not allowed when WINGMAN_ENV != dev')
+
 secret = os.environ.get('FLASK_SECRET_KEY')
 if not secret or len(secret) < 32:
     raise RuntimeError('FLASK_SECRET_KEY must be set to a strong random value (>=32 chars)')
 app.secret_key = secret
 
+# Trust proxy headers from the immediate upstream (Nginx/Cloudflare)
+# Ensure your proxy sets X-Forwarded-For / X-Forwarded-Proto / X-Forwarded-Host.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 # Initialize SocketIO for real-time deployment logs
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+allowed = os.environ.get('WINGMAN_ALLOWED_ORIGINS', '')
+allowed_origins = [o.strip() for o in allowed.split(',') if o.strip()]
+# If empty, restrict to same-origin.
+socketio = SocketIO(app, cors_allowed_origins=allowed_origins or None, async_mode='eventlet')
 
 # Session cookie hardening (set SESSION_COOKIE_SECURE=true when behind HTTPS)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Strict',
-    SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true',
+    # Same-origin app; Lax supports common SSO flows (OIDC/SAML redirects).
+    SESSION_COOKIE_SAMESITE=os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax' if WINGMAN_ENV != 'dev' else 'Lax'),
+    # Default to Secure in non-dev; override only for local development.
+    SESSION_COOKIE_SECURE=(os.environ.get('SESSION_COOKIE_SECURE', 'true' if WINGMAN_ENV != 'dev' else 'false').lower() == 'true'),
 )
 
 # Basic rate limiting (tune as needed)
@@ -49,6 +70,36 @@ logger = logging.getLogger(__name__)
 # Initialize managers
 deployment_manager = DeploymentManager()
 auth_manager = AuthManager()
+
+# --- CSRF protection for cookie-based sessions ---
+# If a request uses Authorization: Bearer <token>, it is treated as an API-token request and is exempt.
+# Browser/session-authenticated state-changing requests must include X-CSRF-Token.
+
+def _ensure_csrf_token():
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_urlsafe(32)
+    return session['csrf_token']
+
+@app.route('/api/csrf', methods=['GET'])
+@login_required
+def get_csrf_token():
+    return jsonify({'success': True, 'csrf_token': _ensure_csrf_token()})
+
+@app.before_request
+def enforce_csrf_for_cookie_sessions():
+    if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        auth = request.headers.get('Authorization', '')
+        if auth.lower().startswith('bearer '):
+            return  # API token auth: CSRF not applicable
+        # If using session cookies, require CSRF token
+        # Allow login/logout routes to proceed without CSRF to avoid bootstrapping issues.
+        if request.path in ('/login', '/api/auth/login') or request.path.startswith('/static/'):
+            return
+        expected = session.get('csrf_token')
+        provided = request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken')
+        if not expected or not provided or not hmac.compare_digest(str(expected), str(provided)):
+            return jsonify({'success': False, 'error': 'CSRF token missing or invalid'}), 403
+
 
 # Add cache-control headers to prevent aggressive browser caching
 @app.after_request
@@ -110,10 +161,12 @@ def api_login():
         if user:
             session['username'] = user.username
             session['role'] = user.role
+            csrf_token = _ensure_csrf_token()
             logger.info(f"User {username} logged in successfully")
             return jsonify({
                 'success': True,
-                'user': user.to_dict()
+                'user': user.to_dict(),
+                'csrf_token': csrf_token
             })
         else:
             return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
