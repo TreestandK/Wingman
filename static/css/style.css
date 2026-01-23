@@ -845,6 +845,180 @@ input[type="file"]::file-selector-button:hover {
     gap: 10px;
 }
 
+/* ===================================
+   User Management Styles
+   =================================== */
+
+.user-card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid var(--primary-color);
+    transition: transform 0.2s ease;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.user-card:hover {
+    transform: translateX(5px);
+}
+
+.user-card.sso-user {
+    border-left-color: var(--secondary-color);
+}
+
+.user-card.inactive {
+    opacity: 0.6;
+    border-left-color: var(--text-secondary);
+}
+
+.user-info {
+    flex: 1;
+    min-width: 250px;
+}
+
+.user-info h4 {
+    color: var(--primary-color);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.user-info h4 i {
+    font-size: 1.1em;
+}
+
+/* Role and Status Badges */
+.badge {
+    font-size: 0.7em;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-admin {
+    background: var(--danger-color);
+    color: white;
+}
+
+.badge-operator {
+    background: var(--warning-color);
+    color: #1a1a2e;
+}
+
+.badge-viewer {
+    background: var(--text-secondary);
+    color: white;
+}
+
+.badge-sso {
+    background: var(--secondary-color);
+    color: #1a1a2e;
+}
+
+.badge-inactive {
+    background: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.user-meta {
+    display: flex;
+    gap: 20px;
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    flex-wrap: wrap;
+}
+
+.user-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.user-meta span i {
+    color: var(--primary-color);
+    font-size: 0.9em;
+}
+
+.user-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.user-actions .btn {
+    padding: 8px 16px;
+    font-size: 0.9em;
+}
+
+/* Role select dropdown in user card */
+.role-select {
+    padding: 8px 12px;
+    background: var(--dark-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.role-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.role-select:hover {
+    border-color: var(--primary-color);
+}
+
+/* Password input styling */
+.form-group input[type="password"],
+.form-group input[type="email"] {
+    width: 100%;
+    padding: 12px;
+    background: var(--dark-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input[type="password"]:focus,
+.form-group input[type="email"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* No users message */
+.no-users-message {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.no-users-message i {
+    font-size: 3em;
+    margin-bottom: 15px;
+    color: var(--border-color);
+}
+
+/* User form specific */
+#add-user-form .form-actions {
+    margin-top: 20px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .header {
@@ -875,5 +1049,20 @@ input[type="file"]::file-selector-button:hover {
 
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .user-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .user-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .user-meta {
+        flex-direction: column;
+        gap: 8px;
     }
 }

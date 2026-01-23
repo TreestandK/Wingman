@@ -1,111 +1,71 @@
 """
 Authentication and user management for Wingman
-Supports both built-in authentication and optional SAML integration
+Supports SQLAlchemy database backend with OIDC SSO integration
 """
 
 import os
-import json
 import bcrypt
 import logging
 from typing import Optional, Dict, List
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
-from flask import session, request, jsonify
+from flask import session, request, jsonify, current_app
 
 logger = logging.getLogger(__name__)
 
-class User:
-    """User model"""
-    def __init__(self, username: str, password_hash: str, role: str, email: str = None, created_at: str = None):
-        self.username = username
-        self.password_hash = password_hash
-        self.role = role
-        self.email = email
-        self.created_at = created_at or datetime.now().isoformat()
-        self.last_login = None
-        self.is_active = True
-
-    def to_dict(self):
-        """Convert to dictionary (excluding password_hash)"""
-        return {
-            'username': self.username,
-            'role': self.role,
-            'email': self.email,
-            'created_at': self.created_at,
-            'last_login': self.last_login,
-            'is_active': self.is_active
-        }
-
-    def check_password(self, password: str) -> bool:
-        """Verify password against hash"""
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-
 
 class AuthManager:
-    """Manages authentication and user accounts"""
+    """Manages authentication and user accounts using SQLAlchemy"""
 
-    def __init__(self, data_dir: str = '/app/data'):
-        self.data_dir = data_dir
-        self.users_file = os.path.join(data_dir, 'users.json')
-        self.audit_log_file = os.path.join(data_dir, 'audit.log')
-        self.users: Dict[str, User] = {}
+    def __init__(self, app=None):
+        self.app = app
         env_value = os.environ.get('ENABLE_AUTH', 'true')
-        self.auth_enabled = env_value.lower() == 'true'  # Default: enabled
+        self.auth_enabled = env_value.lower() == 'true'
+        self.oidc_enabled = os.environ.get('ENABLE_OIDC', 'false').lower() == 'true'
         logger.info(f"AuthManager initialized: ENABLE_AUTH={env_value}, auth_enabled={self.auth_enabled}")
-        self.saml_enabled = os.environ.get('ENABLE_SAML', 'false').lower() == 'true'
-        self._load_users()
-        self._ensure_admin_exists()
 
-    def _load_users(self):
-        """Load users from JSON file"""
-        try:
-            if os.path.exists(self.users_file):
-                with open(self.users_file, 'r') as f:
-                    users_data = json.load(f)
-                    for username, data in users_data.items():
-                        self.users[username] = User(
-                            username=data['username'],
-                            password_hash=data['password_hash'],
-                            role=data['role'],
-                            email=data.get('email'),
-                            created_at=data.get('created_at')
-                        )
-                        self.users[username].last_login = data.get('last_login')
-                        self.users[username].is_active = data.get('is_active', True)
-                logger.info(f"Loaded {len(self.users)} users from {self.users_file}")
-        except Exception as e:
-            logger.error(f"Error loading users: {e}")
+        if app:
+            self.init_app(app)
 
-    def _save_users(self):
-        """Save users to JSON file"""
-        try:
-            users_data = {}
-            for username, user in self.users.items():
-                users_data[username] = {
-                    'username': user.username,
-                    'password_hash': user.password_hash,
-                    'role': user.role,
-                    'email': user.email,
-                    'created_at': user.created_at,
-                    'last_login': user.last_login,
-                    'is_active': user.is_active
-                }
-            with open(self.users_file, 'w') as f:
-                json.dump(users_data, f, indent=2)
-            logger.info(f"Saved {len(self.users)} users to {self.users_file}")
-        except Exception as e:
-            logger.error(f"Error saving users: {e}")
+    def init_app(self, app):
+        """Initialize with Flask app context"""
+        self.app = app
+        with app.app_context():
+            self._ensure_admin_exists()
+
+    def _get_db(self):
+        """Get database session from current app context"""
+        from models import db
+        return db
+
+    def _get_user_model(self):
+        """Get User model"""
+        from models import User
+        return User
+
+    def _get_audit_model(self):
+        """Get AuditLog model"""
+        from models import AuditLog
+        return AuditLog
 
     def _ensure_admin_exists(self):
         """Ensure at least one admin user exists"""
         try:
-            if not self.users and self.auth_enabled:
-                # Create initial admin only if explicitly configured (prevents insecure defaults)
+            if not self.auth_enabled:
+                return
+
+            User = self._get_user_model()
+            admin_count = User.query.filter_by(role='admin', is_active=True).count()
+
+            if admin_count == 0:
+                # Create initial admin only if explicitly configured
                 default_password = os.environ.get('ADMIN_PASSWORD')
                 if not default_password:
-                    raise RuntimeError('ADMIN_PASSWORD must be set for first-run admin bootstrap')
+                    logger.warning('No admin users exist and ADMIN_PASSWORD not set - skipping bootstrap')
+                    return
                 if len(default_password) < 14:
                     raise RuntimeError('ADMIN_PASSWORD must be at least 14 characters')
+
                 result = self.create_user('admin', default_password, 'admin', 'admin@localhost')
                 if result.get('success'):
                     logger.warning('=' * 60)
@@ -116,37 +76,60 @@ class AuthManager:
                     logger.error("Failed to create initial admin user: %s" % result.get('error'))
         except Exception as e:
             logger.error(f"Error in _ensure_admin_exists: {e}")
-            # Don't crash the app, just log the error
             import traceback
             traceback.print_exc()
 
-    def create_user(self, username: str, password: str, role: str, email: str = None) -> Dict:
+    def create_user(self, username: str, password: str, role: str, email: str = None,
+                    skip_password_validation: bool = False) -> Dict:
         """Create a new user"""
         try:
-            if username in self.users:
+            from security import validate_password
+
+            db = self._get_db()
+            User = self._get_user_model()
+
+            # Check if user exists
+            if User.query.filter_by(username=username).first():
                 return {'success': False, 'error': 'User already exists'}
 
             if role not in ['admin', 'operator', 'viewer']:
                 return {'success': False, 'error': 'Invalid role. Must be: admin, operator, or viewer'}
 
-            # Hash password
-            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            # Validate password strength (skip for initial admin bootstrap)
+            if not skip_password_validation:
+                is_valid, errors = validate_password(password, username)
+                if not is_valid:
+                    return {'success': False, 'error': errors[0], 'password_errors': errors}
 
             # Create user
-            user = User(username, password_hash, role, email)
-            self.users[username] = user
-            self._save_users()
+            user = User(
+                username=username,
+                email=email,
+                role=role,
+                auth_provider='local'
+            )
+            user.set_password(password)
+
+            db.session.add(user)
+            db.session.commit()
 
             self._audit_log('user_created', username, f"User {username} created with role {role}")
             return {'success': True, 'message': f'User {username} created successfully'}
         except Exception as e:
             logger.error(f"Error creating user: {e}")
+            db.session.rollback()
             return {'success': False, 'error': str(e)}
 
-    def authenticate(self, username: str, password: str) -> Optional[User]:
+    def authenticate(self, username: str, password: str) -> Optional[Dict]:
         """Authenticate user with username and password"""
         try:
-            user = self.users.get(username)
+            from security import get_lockout_policy
+
+            db = self._get_db()
+            User = self._get_user_model()
+            lockout_policy = get_lockout_policy()
+
+            user = User.query.filter_by(username=username).first()
             if not user:
                 self._audit_log('login_failed', username, 'User not found')
                 return None
@@ -155,13 +138,42 @@ class AuthManager:
                 self._audit_log('login_failed', username, 'Account inactive')
                 return None
 
+            # Check if account is locked
+            if user.is_locked():
+                remaining = (user.locked_until - datetime.utcnow()).seconds // 60 + 1
+                self._audit_log('login_failed', username, f'Account locked ({remaining} min remaining)')
+                return {
+                    '__locked': True,
+                    'error': f'Account is locked. Try again in {remaining} minutes.',
+                    'locked_until': user.locked_until.isoformat()
+                }
+
             if user.check_password(password):
-                user.last_login = datetime.now().isoformat()
-                self._save_users()
+                # Clear failed login counter on success
+                user.clear_failed_logins()
+                user.last_login = datetime.utcnow()
+                db.session.commit()
                 self._audit_log('login_success', username, 'Successful login')
-                return user
+
+                # Return user dict with session_version for session tracking
+                user_dict = user.to_dict()
+                user_dict['session_version'] = user.session_version
+                return user_dict
             else:
-                self._audit_log('login_failed', username, 'Invalid password')
+                # Record failed login attempt
+                user.record_failed_login(
+                    lockout_threshold=lockout_policy['threshold'],
+                    lockout_duration_minutes=lockout_policy['duration_minutes']
+                )
+                db.session.commit()
+
+                attempts_remaining = lockout_policy['threshold'] - user.failed_login_count
+                if user.is_locked():
+                    self._audit_log('account_locked', username,
+                                    f'Account locked after {lockout_policy["threshold"]} failed attempts')
+                else:
+                    self._audit_log('login_failed', username,
+                                    f'Invalid password ({attempts_remaining} attempts remaining)')
                 return None
         except Exception as e:
             logger.error(f"Authentication error: {e}")
@@ -170,7 +182,12 @@ class AuthManager:
     def change_password(self, username: str, old_password: str, new_password: str) -> Dict:
         """Change user password"""
         try:
-            user = self.users.get(username)
+            from security import validate_password
+
+            db = self._get_db()
+            User = self._get_user_model()
+
+            user = User.query.filter_by(username=username).first()
             if not user:
                 return {'success': False, 'error': 'User not found'}
 
@@ -178,76 +195,279 @@ class AuthManager:
                 self._audit_log('password_change_failed', username, 'Invalid old password')
                 return {'success': False, 'error': 'Invalid old password'}
 
-            # Hash new password
-            user.password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            self._save_users()
+            # Validate new password strength
+            is_valid, errors = validate_password(new_password, username)
+            if not is_valid:
+                return {'success': False, 'error': errors[0], 'password_errors': errors}
+
+            user.set_password(new_password)
+            db.session.commit()
 
             self._audit_log('password_changed', username, 'Password changed successfully')
-            return {'success': True, 'message': 'Password changed successfully'}
+            return {
+                'success': True,
+                'message': 'Password changed successfully',
+                'session_invalidated': True  # Signal to client to re-login
+            }
         except Exception as e:
             logger.error(f"Error changing password: {e}")
+            db.session.rollback()
             return {'success': False, 'error': str(e)}
 
     def delete_user(self, username: str) -> Dict:
         """Delete a user"""
         try:
-            if username not in self.users:
+            db = self._get_db()
+            User = self._get_user_model()
+
+            user = User.query.filter_by(username=username).first()
+            if not user:
                 return {'success': False, 'error': 'User not found'}
 
             # Prevent deleting last admin
-            if self.users[username].role == 'admin':
-                admin_count = sum(1 for u in self.users.values() if u.role == 'admin' and u.is_active)
+            if user.role == 'admin':
+                admin_count = User.query.filter_by(role='admin', is_active=True).count()
                 if admin_count <= 1:
                     return {'success': False, 'error': 'Cannot delete the last admin user'}
 
-            del self.users[username]
-            self._save_users()
+            db.session.delete(user)
+            db.session.commit()
+
             self._audit_log('user_deleted', username, f'User {username} deleted')
             return {'success': True, 'message': f'User {username} deleted successfully'}
         except Exception as e:
             logger.error(f"Error deleting user: {e}")
+            db.session.rollback()
             return {'success': False, 'error': str(e)}
 
     def list_users(self) -> List[Dict]:
         """List all users (excluding password hashes)"""
-        return [user.to_dict() for user in self.users.values()]
+        try:
+            User = self._get_user_model()
+            users = User.query.all()
+            return [user.to_dict() for user in users]
+        except Exception as e:
+            logger.error(f"Error listing users: {e}")
+            return []
 
     def update_user_role(self, username: str, new_role: str) -> Dict:
         """Update user role"""
         try:
-            if username not in self.users:
+            db = self._get_db()
+            User = self._get_user_model()
+
+            user = User.query.filter_by(username=username).first()
+            if not user:
                 return {'success': False, 'error': 'User not found'}
 
             if new_role not in ['admin', 'operator', 'viewer']:
                 return {'success': False, 'error': 'Invalid role'}
 
-            old_role = self.users[username].role
+            old_role = user.role
 
             # Prevent demoting last admin
             if old_role == 'admin' and new_role != 'admin':
-                admin_count = sum(1 for u in self.users.values() if u.role == 'admin' and u.is_active)
+                admin_count = User.query.filter_by(role='admin', is_active=True).count()
                 if admin_count <= 1:
                     return {'success': False, 'error': 'Cannot change role of the last admin user'}
 
-            self.users[username].role = new_role
-            self._save_users()
+            user.role = new_role
+            db.session.commit()
+
             self._audit_log('role_changed', username, f'Role changed from {old_role} to {new_role}')
             return {'success': True, 'message': f'User role updated to {new_role}'}
         except Exception as e:
             logger.error(f"Error updating user role: {e}")
+            db.session.rollback()
             return {'success': False, 'error': str(e)}
+
+    def update_user_status(self, username: str, is_active: bool) -> Dict:
+        """Update user active status"""
+        try:
+            db = self._get_db()
+            User = self._get_user_model()
+
+            user = User.query.filter_by(username=username).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+
+            # Prevent deactivating last admin
+            if not is_active and user.role == 'admin':
+                active_admin_count = User.query.filter_by(role='admin', is_active=True).count()
+                if active_admin_count <= 1:
+                    return {'success': False, 'error': 'Cannot deactivate the last active admin user'}
+
+            user.is_active = is_active
+            db.session.commit()
+
+            action = 'activated' if is_active else 'deactivated'
+            self._audit_log('user_status_changed', username, f'User {action}')
+            return {'success': True, 'message': f'User {action} successfully'}
+        except Exception as e:
+            logger.error(f"Error updating user status: {e}")
+            db.session.rollback()
+            return {'success': False, 'error': str(e)}
+
+    def reset_user_password(self, username: str, new_password: str) -> Dict:
+        """Reset user password (admin action)"""
+        try:
+            from security import validate_password
+
+            db = self._get_db()
+            User = self._get_user_model()
+
+            user = User.query.filter_by(username=username).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+
+            # Validate new password strength
+            is_valid, errors = validate_password(new_password, username)
+            if not is_valid:
+                return {'success': False, 'error': errors[0], 'password_errors': errors}
+
+            user.set_password(new_password)
+            db.session.commit()
+
+            self._audit_log('password_reset', username, 'Password reset by admin')
+            return {'success': True, 'message': 'Password reset successfully'}
+        except Exception as e:
+            logger.error(f"Error resetting password: {e}")
+            db.session.rollback()
+            return {'success': False, 'error': str(e)}
+
+    def unlock_user(self, username: str) -> Dict:
+        """Unlock a locked user account (admin action)"""
+        try:
+            db = self._get_db()
+            User = self._get_user_model()
+
+            user = User.query.filter_by(username=username).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+
+            user.clear_failed_logins()
+            db.session.commit()
+
+            self._audit_log('account_unlocked', username, 'Account unlocked by admin')
+            return {'success': True, 'message': f'User {username} unlocked successfully'}
+        except Exception as e:
+            logger.error(f"Error unlocking user: {e}")
+            db.session.rollback()
+            return {'success': False, 'error': str(e)}
+
+    def get_user(self, username: str) -> Optional[Dict]:
+        """Get user by username"""
+        try:
+            User = self._get_user_model()
+            user = User.query.filter_by(username=username).first()
+            return user.to_dict() if user else None
+        except Exception as e:
+            logger.error(f"Error getting user: {e}")
+            return None
+
+    def get_user_by_external_id(self, external_id: str, provider: str = 'oidc') -> Optional[Dict]:
+        """Get user by external ID (for SSO)"""
+        try:
+            User = self._get_user_model()
+            user = User.query.filter_by(external_id=external_id, auth_provider=provider).first()
+            return user.to_dict() if user else None
+        except Exception as e:
+            logger.error(f"Error getting user by external ID: {e}")
+            return None
+
+    def create_or_update_sso_user(self, external_id: str, username: str, email: str,
+                                   role: str, provider: str = 'oidc',
+                                   display_name: str = None) -> Optional[Dict]:
+        """Create or update SSO user (JIT provisioning)"""
+        try:
+            db = self._get_db()
+            User = self._get_user_model()
+
+            # Look for existing user by external_id
+            user = User.query.filter_by(external_id=external_id, auth_provider=provider).first()
+
+            if not user:
+                # Try to find by email and link accounts
+                if email:
+                    user = User.query.filter_by(email=email).first()
+                    if user and user.auth_provider == 'local':
+                        # Link existing local user to SSO
+                        user.external_id = external_id
+                        user.auth_provider = provider
+
+            if not user:
+                # Create new user
+                user = User(
+                    username=self._generate_unique_username(username),
+                    email=email,
+                    external_id=external_id,
+                    auth_provider=provider,
+                    role=role,
+                    display_name=display_name
+                )
+                db.session.add(user)
+
+            # Update user info on each login
+            if display_name:
+                user.display_name = display_name
+            if email:
+                user.email = email
+            user.role = role
+            user.last_login = datetime.utcnow()
+
+            db.session.commit()
+            self._audit_log('sso_login', user.username, f'SSO login via {provider}')
+
+            return user.to_dict()
+        except Exception as e:
+            logger.error(f"Error creating/updating SSO user: {e}")
+            db.session.rollback()
+            return None
+
+    def _generate_unique_username(self, base_username: str) -> str:
+        """Generate unique username"""
+        import re
+        User = self._get_user_model()
+
+        # Sanitize
+        base_username = re.sub(r'[^a-zA-Z0-9_-]', '_', base_username)
+        if not base_username:
+            base_username = 'user'
+
+        # Ensure uniqueness
+        username = base_username
+        counter = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}_{counter}"
+            counter += 1
+
+        return username
 
     def _audit_log(self, action: str, username: str, details: str):
         """Log authentication events for audit trail"""
         try:
-            timestamp = datetime.now().isoformat()
-            ip_address = request.remote_addr if request else 'unknown'
-            log_entry = f"{timestamp} | {action} | {username} | {ip_address} | {details}\n"
+            db = self._get_db()
+            AuditLog = self._get_audit_model()
 
-            with open(self.audit_log_file, 'a') as f:
-                f.write(log_entry)
+            ip_address = request.remote_addr if request else 'unknown'
+            user_agent = request.user_agent.string if request and request.user_agent else None
+
+            log_entry = AuditLog(
+                action=action,
+                username=username,
+                ip_address=ip_address,
+                details=details,
+                user_agent=user_agent
+            )
+            db.session.add(log_entry)
+            db.session.commit()
         except Exception as e:
             logger.error(f"Error writing audit log: {e}")
+            # Don't fail the main operation if audit logging fails
+            try:
+                db.session.rollback()
+            except:
+                pass
 
 
 # Flask decorators for route protection

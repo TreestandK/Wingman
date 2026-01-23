@@ -36,6 +36,9 @@ function loadTabData(tabName) {
         case 'monitoring':
             loadMonitoringStats();
             break;
+        case 'users':
+            loadUsers();
+            break;
     }
 }
 
@@ -784,6 +787,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial stats
     loadMonitoringStats();
 
+    // Check user permissions to show/hide admin-only tabs
+    checkUserPermissions();
+
     // Refresh stats every 30 seconds
     setInterval(() => {
         if (document.querySelector('[data-tab="monitoring"]').classList.contains('active')) {
@@ -791,3 +797,282 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 30000);
 });
+
+// ===========================================
+// USER MANAGEMENT FUNCTIONS
+// ===========================================
+
+let currentUserRole = null;
+let csrfToken = null;
+
+// Get CSRF token
+async function getCsrfToken() {
+    if (csrfToken) return csrfToken;
+    try {
+        const response = await fetch('/api/csrf');
+        const result = await response.json();
+        csrfToken = result.csrf_token || '';
+        return csrfToken;
+    } catch {
+        return '';
+    }
+}
+
+// Check if current user is admin and show Users tab
+async function checkUserPermissions() {
+    try {
+        const response = await fetch('/api/auth/status');
+        const result = await response.json();
+
+        if (result.success && result.user) {
+            currentUserRole = result.user.role;
+
+            // Show Users tab only for admins
+            const usersTabButton = document.getElementById('users-tab-button');
+            if (usersTabButton && currentUserRole === 'admin') {
+                usersTabButton.style.display = 'flex';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking permissions:', error);
+    }
+}
+
+// Load users list
+async function loadUsers() {
+    const listDiv = document.getElementById('users-list');
+    if (!listDiv) return;
+
+    listDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>';
+
+    try {
+        const token = await getCsrfToken();
+        const response = await fetch('/api/users', {
+            headers: {
+                'X-CSRF-Token': token
+            }
+        });
+        const result = await response.json();
+
+        if (result.success && result.users && result.users.length > 0) {
+            listDiv.innerHTML = result.users.map(user => {
+                const isSSO = user.auth_provider && user.auth_provider !== 'local';
+                const isInactive = user.is_active === false;
+
+                let badges = '';
+                badges += `<span class="badge badge-${user.role}">${esc(user.role)}</span>`;
+                if (isSSO) badges += `<span class="badge badge-sso">SSO</span>`;
+                if (isInactive) badges += `<span class="badge badge-inactive">Inactive</span>`;
+
+                const lastLogin = user.last_login
+                    ? new Date(user.last_login).toLocaleString()
+                    : 'Never';
+
+                const createdAt = user.created_at
+                    ? new Date(user.created_at).toLocaleDateString()
+                    : 'Unknown';
+
+                return `
+                    <div class="user-card ${isSSO ? 'sso-user' : ''} ${isInactive ? 'inactive' : ''}">
+                        <div class="user-info">
+                            <h4>
+                                <i class="fas ${isSSO ? 'fa-shield-alt' : 'fa-user'}"></i>
+                                ${esc(user.username)}
+                                ${badges}
+                            </h4>
+                            <div class="user-meta">
+                                <span><i class="fas fa-envelope"></i> ${esc(user.email || 'No email')}</span>
+                                <span><i class="fas fa-clock"></i> Last login: ${lastLogin}</span>
+                                <span><i class="fas fa-calendar"></i> Created: ${createdAt}</span>
+                            </div>
+                        </div>
+                        <div class="user-actions">
+                            <select class="role-select" onchange="changeUserRole('${esc(user.username)}', this.value)">
+                                <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+                                <option value="operator" ${user.role === 'operator' ? 'selected' : ''}>Operator</option>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="toggleUserStatus('${esc(user.username)}', ${user.is_active !== false})">
+                                <i class="fas fa-${user.is_active !== false ? 'ban' : 'check'}"></i>
+                                ${user.is_active !== false ? 'Disable' : 'Enable'}
+                            </button>
+                            ${!isSSO ? `
+                                <button class="btn btn-secondary" onclick="showResetPasswordModal('${esc(user.username)}')">
+                                    <i class="fas fa-key"></i> Reset
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-danger" onclick="deleteUser('${esc(user.username)}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            listDiv.innerHTML = '<div class="no-users-message"><i class="fas fa-users"></i><p>No users found.</p></div>';
+        }
+    } catch (error) {
+        listDiv.innerHTML = '<p class="error-message"><i class="fas fa-exclamation-triangle"></i> Error loading users.</p>';
+        console.error('Error loading users:', error);
+    }
+}
+
+// Create new user form handler
+document.getElementById('add-user-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = {
+        username: document.getElementById('new-username').value,
+        password: document.getElementById('new-password').value,
+        email: document.getElementById('new-email').value || null,
+        role: document.getElementById('new-role').value
+    };
+
+    try {
+        const token = await getCsrfToken();
+        const response = await fetch('/api/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': token
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('User created successfully!', 'success');
+            document.getElementById('add-user-form').reset();
+            loadUsers();
+        } else {
+            showToast('Failed to create user: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error creating user: ' + error.message, 'error');
+    }
+});
+
+// Change user role
+async function changeUserRole(username, newRole) {
+    try {
+        const token = await getCsrfToken();
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': token
+            },
+            body: JSON.stringify({ role: newRole })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(`Role updated to ${newRole}`, 'success');
+        } else {
+            showToast('Failed to update role: ' + result.error, 'error');
+            loadUsers(); // Reload to reset select
+        }
+    } catch (error) {
+        showToast('Error updating role: ' + error.message, 'error');
+        loadUsers();
+    }
+}
+
+// Toggle user active status
+async function toggleUserStatus(username, currentStatus) {
+    const action = currentStatus ? 'disable' : 'enable';
+    if (!confirm(`Are you sure you want to ${action} user "${username}"?`)) {
+        return;
+    }
+
+    try {
+        const token = await getCsrfToken();
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': token
+            },
+            body: JSON.stringify({ is_active: !currentStatus })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(`User ${action}d successfully`, 'success');
+            loadUsers();
+        } else {
+            showToast(`Failed to ${action} user: ` + result.error, 'error');
+        }
+    } catch (error) {
+        showToast(`Error: ` + error.message, 'error');
+    }
+}
+
+// Delete user
+async function deleteUser(username) {
+    if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const token = await getCsrfToken();
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': token
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('User deleted successfully', 'success');
+            loadUsers();
+        } else {
+            showToast('Failed to delete user: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error deleting user: ' + error.message, 'error');
+    }
+}
+
+// Show reset password modal (simple prompt for now)
+function showResetPasswordModal(username) {
+    const newPassword = prompt(`Enter new password for user "${username}" (minimum 8 characters):`);
+    if (!newPassword) return;
+
+    if (newPassword.length < 8) {
+        showToast('Password must be at least 8 characters', 'error');
+        return;
+    }
+
+    resetUserPassword(username, newPassword);
+}
+
+// Reset user password
+async function resetUserPassword(username, newPassword) {
+    try {
+        const token = await getCsrfToken();
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': token
+            },
+            body: JSON.stringify({ password: newPassword })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Password reset successfully', 'success');
+        } else {
+            showToast('Failed to reset password: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error resetting password: ' + error.message, 'error');
+    }
+}

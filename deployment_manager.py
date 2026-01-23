@@ -36,16 +36,26 @@ class DeploymentManager:
     """Manages game server deployments"""
 
     def __init__(self):
-        self.data_dir = '/app/data'
-        self.logs_dir = '/app/logs'
-        self.templates_dir = '/app/templates/saved'
+        # Use /app for Docker, local directories for development
+        if os.path.exists('/app/data'):
+            self.data_dir = '/app/data'
+            self.logs_dir = '/app/logs'
+            self.templates_dir = '/app/templates/saved'
+        else:
+            # Local development - use directories relative to this file
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            self.data_dir = os.path.join(base_dir, 'data')
+            self.logs_dir = os.path.join(base_dir, 'logs')
+            self.templates_dir = os.path.join(base_dir, 'templates', 'saved')
+
         self.deployments_file = os.path.join(self.data_dir, 'deployments.json')
-        self.deployments = self._load_deployments()
 
         # Ensure directories exist
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
         os.makedirs(self.templates_dir, exist_ok=True)
+
+        self.deployments = self._load_deployments()
 
         # Configuration from environment
         self.config = self._load_config_from_env()

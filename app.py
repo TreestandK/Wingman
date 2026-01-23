@@ -13,11 +13,13 @@ import json
 import logging
 import hmac
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.middleware.proxy_fix import ProxyFix
 from deployment_manager import DeploymentManager
 from auth import AuthManager, login_required, role_required
 from errors import WingmanError, handle_api_error
+from models import db, User, AuditLog, OIDCProvider
+from oidc import oidc_manager, oauth
 
 app = Flask(__name__)
 
@@ -53,15 +55,46 @@ app.config.update(
     SESSION_COOKIE_SECURE=(os.environ.get('SESSION_COOKIE_SECURE', 'true' if WINGMAN_ENV != 'dev' else 'false').lower() == 'true'),
 )
 
+# Database configuration
+# Use /app/data for Docker, data/ for local development
+if os.path.exists('/app/data'):
+    default_db_path = '/app/data/wingman.db'
+else:
+    # Local development - use absolute path relative to this file
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    default_db_path = os.path.join(data_dir, 'wingman.db')
+
+db_url = os.environ.get('DATABASE_URL', f'sqlite:///{default_db_path}')
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Ensure data directory exists for SQLite (for custom DATABASE_URL)
+if db_url.startswith('sqlite:///'):
+    db_file = db_url.replace('sqlite:///', '')
+    db_dir = os.path.dirname(db_file)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+
+# Initialize SQLAlchemy
+db.init_app(app)
+
+# Create tables on startup (if they don't exist)
+with app.app_context():
+    db.create_all()
+
 # Basic rate limiting (tune as needed)
 limiter = Limiter(get_remote_address, app=app, default_limits=['200 per minute'])
 
-# Configure logging
+# Configure logging - use local directory if /app/logs doesn't exist
+log_dir = '/app/logs' if os.path.exists('/app/logs') else 'logs'
+os.makedirs(log_dir, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/app/logs/wingman.log'),
+        logging.FileHandler(os.path.join(log_dir, 'wingman.log')),
         logging.StreamHandler()
     ]
 )
@@ -69,7 +102,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize managers
 deployment_manager = DeploymentManager()
-auth_manager = AuthManager()
+auth_manager = AuthManager(app)
 
 # --- CSRF protection for cookie-based sessions ---
 # If a request uses Authorization: Bearer <token>, it is treated as an API-token request and is exempt.
@@ -101,15 +134,93 @@ def enforce_csrf_for_cookie_sessions():
             return jsonify({'success': False, 'error': 'CSRF token missing or invalid'}), 403
 
 
-# Add cache-control headers to prevent aggressive browser caching
+# Add cache-control headers and security headers to all responses
 @app.after_request
 def add_header(response):
-    """Add headers to prevent caching of HTML pages (fixes Firefox caching issues)"""
+    """Add cache control and security headers to responses"""
+    from security import apply_security_headers
+
+    # Prevent caching of HTML pages (fixes Firefox caching issues)
     if response.content_type and 'text/html' in response.content_type:
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+
+    # Apply security headers to all responses
+    apply_security_headers(response)
+
     return response
+
+
+# Session timeout and validation
+@app.before_request
+def check_session_timeout():
+    """Check if session has timed out"""
+    from security import get_session_policy
+
+    # Skip for unauthenticated routes
+    if 'username' not in session:
+        return
+
+    # Skip for static files and health checks
+    if request.path.startswith('/static/') or request.path == '/health':
+        return
+
+    session_policy = get_session_policy()
+    now = datetime.utcnow()
+
+    # Check absolute timeout (max session lifetime)
+    login_time_str = session.get('login_time')
+    if login_time_str:
+        login_time = datetime.fromisoformat(login_time_str)
+        max_lifetime = timedelta(hours=session_policy['absolute_timeout_hours'])
+        if now - login_time > max_lifetime:
+            username = session.get('username', 'unknown')
+            session.clear()
+            logger.info(f"Session expired (absolute timeout) for user {username}")
+            if request.path.startswith('/api/'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Session expired. Please log in again.',
+                    'code': 'SESSION_EXPIRED'
+                }), 401
+            return redirect(url_for('login'))
+
+    # Check inactivity timeout
+    last_activity_str = session.get('last_activity')
+    if last_activity_str:
+        last_activity = datetime.fromisoformat(last_activity_str)
+        inactivity_timeout = timedelta(minutes=session_policy['timeout_minutes'])
+        if now - last_activity > inactivity_timeout:
+            username = session.get('username', 'unknown')
+            session.clear()
+            logger.info(f"Session expired (inactivity timeout) for user {username}")
+            if request.path.startswith('/api/'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Session expired due to inactivity. Please log in again.',
+                    'code': 'SESSION_TIMEOUT'
+                }), 401
+            return redirect(url_for('login'))
+
+    # Check session version (password changed, etc.)
+    username = session.get('username')
+    session_version = session.get('session_version')
+    if username and session_version is not None:
+        user = User.query.filter_by(username=username).first()
+        if user and user.session_version != session_version:
+            session.clear()
+            logger.info(f"Session invalidated (password changed) for user {username}")
+            if request.path.startswith('/api/'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Session invalidated. Please log in again.',
+                    'code': 'SESSION_INVALIDATED'
+                }), 401
+            return redirect(url_for('login'))
+
+    # Update last activity timestamp
+    session['last_activity'] = now.isoformat()
 
 @app.route('/')
 def index():
@@ -147,6 +258,8 @@ def login():
 def api_login():
     """Authenticate user"""
     try:
+        from security import get_session_policy
+
         if not auth_manager.auth_enabled:
             return jsonify({'success': False, 'error': 'Authentication not enabled'}), 400
 
@@ -158,14 +271,34 @@ def api_login():
             return jsonify({'success': False, 'error': 'Username and password required'}), 400
 
         user = auth_manager.authenticate(username, password)
+
+        # Handle account lockout response
+        if user and user.get('__locked'):
+            return jsonify({
+                'success': False,
+                'error': user.get('error'),
+                'locked': True,
+                'locked_until': user.get('locked_until')
+            }), 423  # 423 Locked
+
         if user:
-            session['username'] = user.username
-            session['role'] = user.role
+            # Set session data
+            session['username'] = user['username']
+            session['role'] = user['role']
+            session['auth_provider'] = 'local'
+            session['session_version'] = user.get('session_version', 0)
+
+            # Set session timestamps for timeout tracking
+            session_policy = get_session_policy()
+            now = datetime.utcnow()
+            session['login_time'] = now.isoformat()
+            session['last_activity'] = now.isoformat()
+
             csrf_token = _ensure_csrf_token()
             logger.info(f"User {username} logged in successfully")
             return jsonify({
                 'success': True,
-                'user': user.to_dict(),
+                'user': user,
                 'csrf_token': csrf_token
             })
         else:
@@ -202,6 +335,114 @@ def auth_status():
 def health():
     """Health check endpoint"""
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+
+
+@app.route('/api/auth/password-requirements', methods=['GET'])
+def get_password_requirements():
+    """Get password requirements for display to users"""
+    from security import get_password_requirements
+    return jsonify({
+        'success': True,
+        'requirements': get_password_requirements()
+    })
+
+
+@app.route('/api/users/<username>/unlock', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def unlock_user(username):
+    """Unlock a locked user account"""
+    result = auth_manager.unlock_user(username)
+    if result['success']:
+        return jsonify(result)
+    else:
+        return jsonify(result), 400
+
+# --- OIDC SSO Routes ---
+# Initialize OIDC if enabled
+OIDC_ENABLED = os.environ.get('ENABLE_OIDC', 'false').lower() == 'true'
+if OIDC_ENABLED:
+    oidc_manager.init_app(app)
+
+@app.route('/api/auth/providers', methods=['GET'])
+def get_auth_providers():
+    """Get available authentication providers"""
+    providers = [
+        {
+            'name': 'local',
+            'display_name': 'Local Account',
+            'type': 'local'
+        }
+    ]
+
+    # Add OIDC providers if enabled
+    if OIDC_ENABLED and oidc_manager.enabled:
+        for provider in oidc_manager.get_providers():
+            provider['login_url'] = url_for('oidc_login', provider=provider['name'])
+            providers.append(provider)
+
+    return jsonify({'success': True, 'providers': providers})
+
+@app.route('/auth/oidc/login')
+@app.route('/auth/oidc/login/<provider>')
+def oidc_login(provider='default'):
+    """Initiate OIDC login flow"""
+    if not OIDC_ENABLED or not oidc_manager.enabled:
+        return jsonify({'success': False, 'error': 'OIDC not enabled'}), 400
+
+    try:
+        auth_url, state = oidc_manager.get_authorization_url(provider)
+        return redirect(auth_url)
+    except Exception as e:
+        logger.error(f"OIDC login error: {e}")
+        return redirect(url_for('login') + '?error=oidc_init_failed')
+
+@app.route('/auth/oidc/callback')
+@app.route('/auth/oidc/callback/<provider>')
+def oidc_callback(provider='default'):
+    """Handle OIDC callback"""
+    if not OIDC_ENABLED or not oidc_manager.enabled:
+        return redirect(url_for('login'))
+
+    # Check for errors from provider
+    error = request.args.get('error')
+    if error:
+        error_desc = request.args.get('error_description', error)
+        logger.error(f"OIDC error from provider: {error} - {error_desc}")
+        return redirect(url_for('login') + f'?error={error}')
+
+    # Handle callback
+    user_info = oidc_manager.handle_callback(provider)
+
+    if user_info:
+        # Create or update user in database
+        user = auth_manager.create_or_update_sso_user(
+            external_id=user_info['external_id'],
+            username=user_info['username'],
+            email=user_info['email'],
+            role=user_info['role'],
+            provider='oidc',
+            display_name=user_info.get('display_name')
+        )
+
+        if user:
+            session['username'] = user['username']
+            session['role'] = user['role']
+            session['auth_provider'] = 'oidc'
+            _ensure_csrf_token()
+            logger.info(f"OIDC user {user['username']} logged in via {provider}")
+            return redirect(url_for('index'))
+
+    logger.error("OIDC callback failed - no user info")
+    return redirect(url_for('login') + '?error=oidc_failed')
+
+@app.route('/auth/oidc/logout')
+def oidc_logout():
+    """OIDC logout"""
+    username = session.get('username', 'unknown')
+    session.clear()
+    logger.info(f"OIDC user {username} logged out")
+    return redirect(url_for('login'))
 
 @app.route('/api/auth/debug', methods=['GET'])
 @role_required(['admin'])
@@ -503,6 +744,43 @@ def update_user_role(username):
         return jsonify(result)
     except Exception as e:
         logger.error(f"Role update error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/users/<username>/status', methods=['PUT'])
+@role_required(['admin'])
+def update_user_status(username):
+    """Update user active status (admin only)"""
+    try:
+        data = request.json
+        is_active = data.get('is_active')
+
+        if is_active is None:
+            return jsonify({'success': False, 'error': 'is_active field required'}), 400
+
+        result = auth_manager.update_user_status(username, is_active)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"User status update error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/users/<username>/password', methods=['PUT'])
+@role_required(['admin'])
+def reset_user_password(username):
+    """Reset user password (admin only)"""
+    try:
+        data = request.json
+        new_password = data.get('password')
+
+        if not new_password:
+            return jsonify({'success': False, 'error': 'Password required'}), 400
+
+        if len(new_password) < 8:
+            return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
+
+        result = auth_manager.reset_user_password(username, new_password)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Password reset error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/users/change-password', methods=['POST'])

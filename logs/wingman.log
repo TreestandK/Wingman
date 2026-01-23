@@ -1,0 +1,40 @@
+2026-01-23 05:01:37,595 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:01:37,882 - auth - WARNING - ============================================================
+2026-01-23 05:01:37,882 - auth - WARNING - CREATED INITIAL ADMIN USER 'admin' - CHANGE PASSWORD IMMEDIATELY!
+2026-01-23 05:01:37,882 - auth - WARNING - Password was NOT logged for security.
+2026-01-23 05:01:37,882 - auth - WARNING - ============================================================
+2026-01-23 05:02:15,763 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:02:27,836 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:03:31,960 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:03:48,221 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:04:09,758 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:04:37,799 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:04:38,102 - app - INFO - User admin logged in successfully
+2026-01-23 05:05:01,807 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:05:02,110 - app - INFO - User admin logged in successfully
+2026-01-23 05:05:02,681 - app - INFO - User admin logged out
+2026-01-23 05:16:17,465 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:16:17,751 - auth - WARNING - ============================================================
+2026-01-23 05:16:17,751 - auth - WARNING - CREATED INITIAL ADMIN USER 'admin' - CHANGE PASSWORD IMMEDIATELY!
+2026-01-23 05:16:17,751 - auth - WARNING - Password was NOT logged for security.
+2026-01-23 05:16:17,751 - auth - WARNING - ============================================================
+2026-01-23 05:16:37,343 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:16:59,656 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:17:24,733 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:17:25,019 - auth - WARNING - ============================================================
+2026-01-23 05:17:25,019 - auth - WARNING - CREATED INITIAL ADMIN USER 'admin' - CHANGE PASSWORD IMMEDIATELY!
+2026-01-23 05:17:25,019 - auth - WARNING - Password was NOT logged for security.
+2026-01-23 05:17:25,020 - auth - WARNING - ============================================================
+2026-01-23 05:17:25,322 - app - INFO - User admin logged in successfully
+2026-01-23 05:23:17,598 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:23:17,884 - auth - WARNING - ============================================================
+2026-01-23 05:23:17,884 - auth - WARNING - CREATED INITIAL ADMIN USER 'admin' - CHANGE PASSWORD IMMEDIATELY!
+2026-01-23 05:23:17,884 - auth - WARNING - Password was NOT logged for security.
+2026-01-23 05:23:17,884 - auth - WARNING - ============================================================
+2026-01-23 05:23:38,109 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:23:38,415 - auth - WARNING - ============================================================
+2026-01-23 05:23:38,415 - auth - WARNING - CREATED INITIAL ADMIN USER 'admin' - CHANGE PASSWORD IMMEDIATELY!
+2026-01-23 05:23:38,415 - auth - WARNING - Password was NOT logged for security.
+2026-01-23 05:23:38,415 - auth - WARNING - ============================================================
+2026-01-23 05:23:38,713 - app - INFO - User admin logged in successfully
+2026-01-23 05:23:40,367 - app - INFO - User admin logged out

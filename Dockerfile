@@ -38,8 +38,9 @@ WORKDIR /app
 # Copy requirements first for better layer caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt && \
+# Upgrade pip and install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
     # Remove build dependencies to reduce image size
     apk del .build-deps
 
@@ -47,10 +48,13 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 COPY app.py .
 COPY deployment_manager.py .
 COPY auth.py .
+COPY models.py .
+COPY security.py .
+COPY oidc.py .
 COPY rbac.py .
 COPY errors.py .
 COPY create_admin.py .
-COPY test_auth.py .
+COPY migrate_to_sqlite.py .
 
 # Create directories
 RUN mkdir -p /app/data /app/logs /app/templates/saved /app/templates/html /app/static

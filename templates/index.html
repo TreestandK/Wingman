@@ -59,6 +59,9 @@
             <button class="tab-button" data-tab="settings">
                 <i class="fas fa-cog"></i> Settings
             </button>
+            <button class="tab-button" data-tab="users" id="users-tab-button" style="display: none;">
+                <i class="fas fa-users"></i> Users
+            </button>
         </nav>
 
         <!-- Main Content Area -->
@@ -592,6 +595,71 @@
                     </div>
 
                     <div id="config-status" class="config-status"></div>
+                </div>
+            </div>
+
+            <!-- Users Tab (Admin Only) -->
+            <div class="tab-content" id="users-tab">
+                <div class="panel">
+                    <h2><i class="fas fa-users"></i> User Management</h2>
+
+                    <!-- Add User Section -->
+                    <div class="form-section" id="add-user-section">
+                        <h3><i class="fas fa-user-plus"></i> Add New User</h3>
+                        <form id="add-user-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="new-username">
+                                        <i class="fas fa-user"></i> Username
+                                    </label>
+                                    <input type="text" id="new-username" name="username"
+                                           pattern="[a-zA-Z0-9_-]+" required
+                                           placeholder="Enter username">
+                                    <small>Letters, numbers, underscores, and hyphens only</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-email">
+                                        <i class="fas fa-envelope"></i> Email
+                                    </label>
+                                    <input type="email" id="new-email" name="email"
+                                           placeholder="user@example.com">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="new-password">
+                                        <i class="fas fa-lock"></i> Password
+                                    </label>
+                                    <input type="password" id="new-password" name="password"
+                                           minlength="8" required
+                                           placeholder="Minimum 8 characters">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-role">
+                                        <i class="fas fa-user-tag"></i> Role
+                                    </label>
+                                    <select id="new-role" name="role" required>
+                                        <option value="viewer">Viewer - Read-only access</option>
+                                        <option value="operator">Operator - Can deploy servers</option>
+                                        <option value="admin">Admin - Full access</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-user-plus"></i> Create User
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Users List Section -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-list"></i> Current Users</h3>
+                        <div id="users-list">
+                            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
