@@ -38,6 +38,7 @@ function loadTabData(tabName) {
             break;
         case 'users':
             loadUsers();
+            loadPasswordRequirements();
             break;
     }
 }
@@ -838,6 +839,79 @@ async function checkUserPermissions() {
     }
 }
 
+// Password requirements cache
+let passwordRequirements = null;
+
+// Load and display password requirements
+async function loadPasswordRequirements() {
+    const reqDiv = document.getElementById('password-requirements');
+    if (!reqDiv) return;
+
+    try {
+        const response = await fetch('/api/auth/password-requirements');
+        const result = await response.json();
+
+        if (result.success && result.requirements) {
+            passwordRequirements = result.requirements;
+            const reqList = reqDiv.querySelector('ul');
+            reqList.innerHTML = passwordRequirements.requirements_text.map((req, i) =>
+                `<li id="req-${i}" class="unmet"><i class="fas fa-circle"></i> ${esc(req)}</li>`
+            ).join('');
+
+            // Add live validation listener
+            const passwordInput = document.getElementById('new-password');
+            if (passwordInput) {
+                passwordInput.addEventListener('input', validatePasswordLive);
+                // Update minlength attribute
+                passwordInput.minLength = passwordRequirements.min_length;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading password requirements:', error);
+    }
+}
+
+// Live password validation
+function validatePasswordLive() {
+    if (!passwordRequirements) return;
+
+    const password = document.getElementById('new-password').value;
+    const reqs = passwordRequirements;
+    let reqIndex = 0;
+
+    // Check min length
+    const lengthMet = password.length >= reqs.min_length;
+    updateRequirement(reqIndex++, lengthMet);
+
+    // Check uppercase
+    if (reqs.require_uppercase) {
+        updateRequirement(reqIndex++, /[A-Z]/.test(password));
+    }
+
+    // Check lowercase
+    if (reqs.require_lowercase) {
+        updateRequirement(reqIndex++, /[a-z]/.test(password));
+    }
+
+    // Check digit
+    if (reqs.require_digit) {
+        updateRequirement(reqIndex++, /\d/.test(password));
+    }
+
+    // Check special char
+    if (reqs.require_special) {
+        updateRequirement(reqIndex++, /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password));
+    }
+}
+
+function updateRequirement(index, met) {
+    const el = document.getElementById(`req-${index}`);
+    if (el) {
+        el.className = met ? 'met' : 'unmet';
+        el.querySelector('i').className = met ? 'fas fa-check-circle' : 'fas fa-circle';
+    }
+}
+
 // Load users list
 async function loadUsers() {
     const listDiv = document.getElementById('users-list');
@@ -858,10 +932,12 @@ async function loadUsers() {
             listDiv.innerHTML = result.users.map(user => {
                 const isSSO = user.auth_provider && user.auth_provider !== 'local';
                 const isInactive = user.is_active === false;
+                const isLocked = user.is_locked === true;
 
                 let badges = '';
                 badges += `<span class="badge badge-${user.role}">${esc(user.role)}</span>`;
                 if (isSSO) badges += `<span class="badge badge-sso">SSO</span>`;
+                if (isLocked) badges += `<span class="badge badge-locked"><i class="fas fa-lock"></i> Locked</span>`;
                 if (isInactive) badges += `<span class="badge badge-inactive">Inactive</span>`;
 
                 const lastLogin = user.last_login
@@ -872,8 +948,13 @@ async function loadUsers() {
                     ? new Date(user.created_at).toLocaleDateString()
                     : 'Unknown';
 
+                // Show failed login info if any
+                const failedLogins = user.failed_login_count > 0
+                    ? `<span><i class="fas fa-exclamation-triangle" style="color: var(--warning-color)"></i> Failed logins: ${user.failed_login_count}</span>`
+                    : '';
+
                 return `
-                    <div class="user-card ${isSSO ? 'sso-user' : ''} ${isInactive ? 'inactive' : ''}">
+                    <div class="user-card ${isSSO ? 'sso-user' : ''} ${isInactive ? 'inactive' : ''} ${isLocked ? 'locked' : ''}">
                         <div class="user-info">
                             <h4>
                                 <i class="fas ${isSSO ? 'fa-shield-alt' : 'fa-user'}"></i>
@@ -884,9 +965,15 @@ async function loadUsers() {
                                 <span><i class="fas fa-envelope"></i> ${esc(user.email || 'No email')}</span>
                                 <span><i class="fas fa-clock"></i> Last login: ${lastLogin}</span>
                                 <span><i class="fas fa-calendar"></i> Created: ${createdAt}</span>
+                                ${failedLogins}
                             </div>
                         </div>
                         <div class="user-actions">
+                            ${isLocked ? `
+                                <button class="btn btn-warning" onclick="unlockUser('${esc(user.username)}')">
+                                    <i class="fas fa-unlock"></i> Unlock
+                                </button>
+                            ` : ''}
                             <select class="role-select" onchange="changeUserRole('${esc(user.username)}', this.value)">
                                 <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>Viewer</option>
                                 <option value="operator" ${user.role === 'operator' ? 'selected' : ''}>Operator</option>
@@ -1008,6 +1095,34 @@ async function toggleUserStatus(username, currentStatus) {
         }
     } catch (error) {
         showToast(`Error: ` + error.message, 'error');
+    }
+}
+
+// Unlock a locked user account
+async function unlockUser(username) {
+    if (!confirm(`Are you sure you want to unlock user "${username}"?`)) {
+        return;
+    }
+
+    try {
+        const token = await getCsrfToken();
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/unlock`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': token
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('User unlocked successfully', 'success');
+            loadUsers();
+        } else {
+            showToast('Failed to unlock user: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error unlocking user: ' + error.message, 'error');
     }
 }
 

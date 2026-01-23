@@ -298,6 +298,15 @@ body {
     background: #c0392b;
 }
 
+.btn-warning {
+    background: var(--warning-color);
+    color: #1a1a2e;
+}
+
+.btn-warning:hover {
+    background: #e67e22;
+}
+
 .form-actions {
     display: flex;
     gap: 15px;
@@ -876,6 +885,11 @@ input[type="file"]::file-selector-button:hover {
     border-left-color: var(--text-secondary);
 }
 
+.user-card.locked {
+    border-left-color: #c0392b;
+    background: linear-gradient(135deg, rgba(192, 57, 43, 0.1) 0%, var(--card-bg) 100%);
+}
+
 .user-info {
     flex: 1;
     min-width: 250px;
@@ -926,6 +940,57 @@ input[type="file"]::file-selector-button:hover {
 
 .badge-inactive {
     background: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.badge-locked {
+    background: #c0392b;
+    color: white;
+    animation: pulse-locked 1.5s infinite;
+}
+
+@keyframes pulse-locked {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Password requirements display */
+.password-requirements {
+    background: rgba(74, 144, 226, 0.1);
+    border: 1px solid var(--primary-color);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 8px;
+    font-size: 0.85em;
+}
+
+.password-requirements h5 {
+    color: var(--primary-color);
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+
+.password-requirements ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.password-requirements li {
+    padding: 3px 0;
+    color: var(--text-secondary);
+}
+
+.password-requirements li i {
+    margin-right: 6px;
+    width: 16px;
+}
+
+.password-requirements li.met {
+    color: var(--success-color);
+}
+
+.password-requirements li.unmet {
     color: var(--text-secondary);
 }
 

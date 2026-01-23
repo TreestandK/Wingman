@@ -38,3 +38,5 @@
 2026-01-23 05:23:38,415 - auth - WARNING - ============================================================
 2026-01-23 05:23:38,713 - app - INFO - User admin logged in successfully
 2026-01-23 05:23:40,367 - app - INFO - User admin logged out
+2026-01-23 05:42:54,169 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 05:47:18,175 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
