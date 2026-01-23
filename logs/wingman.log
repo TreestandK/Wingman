@@ -106,3 +106,37 @@
 2026-01-23 06:01:08,450 - app - INFO - User admin must change password on first login
 2026-01-23 06:01:08,989 - app - INFO - User admin changed password successfully
 2026-01-23 06:01:09,263 - app - INFO - User admin logged in successfully
+2026-01-23 06:09:18,280 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:09:18,568 - auth - WARNING - ======================================================================
+2026-01-23 06:09:18,568 - auth - WARNING - 
+2026-01-23 06:09:18,568 - auth - WARNING -   INITIAL ADMIN SETUP
+2026-01-23 06:09:18,568 - auth - WARNING - 
+2026-01-23 06:09:18,568 - auth - WARNING -   Username: admin
+2026-01-23 06:09:18,568 - auth - WARNING -   One-time token: FdapB-0I48z0LPyAdjRIe4BJ4u21wSGf
+2026-01-23 06:09:18,568 - auth - WARNING - 
+2026-01-23 06:09:18,569 - auth - WARNING -   Login with this token and set a new password.
+2026-01-23 06:09:18,569 - auth - WARNING -   This token will only be shown once!
+2026-01-23 06:09:18,569 - auth - WARNING - 
+2026-01-23 06:09:18,569 - auth - WARNING - ======================================================================
+2026-01-23 06:09:19,130 - app - INFO - User admin logged in successfully
+2026-01-23 06:09:19,130 - app - INFO - User admin must change password on first login
+2026-01-23 06:09:19,668 - app - INFO - User admin changed password successfully
+2026-01-23 06:09:19,669 - app - INFO - User admin auto-logged in after password change
+2026-01-23 06:09:19,671 - app - INFO - Session invalidated (password changed) for user admin
+2026-01-23 06:11:11,497 - auth - INFO - AuthManager initialized: ENABLE_AUTH=true, auth_enabled=True
+2026-01-23 06:11:11,791 - auth - WARNING - ======================================================================
+2026-01-23 06:11:11,791 - auth - WARNING - 
+2026-01-23 06:11:11,791 - auth - WARNING -   INITIAL ADMIN SETUP
+2026-01-23 06:11:11,791 - auth - WARNING - 
+2026-01-23 06:11:11,791 - auth - WARNING -   Username: admin
+2026-01-23 06:11:11,791 - auth - WARNING -   One-time token: 6mqgYKrWxg8Gh_lppey18_zW-Fi62Va_
+2026-01-23 06:11:11,791 - auth - WARNING - 
+2026-01-23 06:11:11,791 - auth - WARNING -   Login with this token and set a new password.
+2026-01-23 06:11:11,792 - auth - WARNING -   This token will only be shown once!
+2026-01-23 06:11:11,792 - auth - WARNING - 
+2026-01-23 06:11:11,792 - auth - WARNING - ======================================================================
+2026-01-23 06:11:12,352 - app - INFO - User admin logged in successfully
+2026-01-23 06:11:12,352 - app - INFO - User admin must change password on first login
+2026-01-23 06:11:12,890 - app - INFO - User admin changed password successfully
+2026-01-23 06:11:12,891 - app - INFO - User admin auto-logged in after password change
+2026-01-23 06:11:12,893 - app - INFO - auth_status called: auth_manager.auth_enabled=True, ENABLE_AUTH env=NOT SET

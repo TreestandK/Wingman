@@ -456,15 +456,23 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert('Password changed successfully! Please log in with your new password.', 'success');
-                    // Show login form again
-                    setTimeout(() => {
-                        document.getElementById('changePasswordForm').style.display = 'none';
-                        document.getElementById('loginForm').style.display = 'block';
-                        document.getElementById('password').value = '';
-                        document.querySelector('.login-header p').textContent = 'Game Server Manager';
-                        hideAlert();
-                    }, 2000);
+                    if (data.auto_login) {
+                        // Auto-logged in, redirect to dashboard
+                        showAlert('Password changed successfully! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    } else {
+                        // Fallback: show login form
+                        showAlert('Password changed successfully! Please log in.', 'success');
+                        setTimeout(() => {
+                            document.getElementById('changePasswordForm').style.display = 'none';
+                            document.getElementById('loginForm').style.display = 'block';
+                            document.getElementById('password').value = '';
+                            document.querySelector('.login-header p').textContent = 'Game Server Manager';
+                            hideAlert();
+                        }, 2000);
+                    }
                 } else {
                     showAlert(data.error || 'Failed to change password', 'error');
                 }

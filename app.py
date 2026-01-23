@@ -328,6 +328,8 @@ def api_logout():
 def api_change_password():
     """Change user password (used for forced password change on first login)"""
     try:
+        from security import get_session_policy
+
         data = request.json
         username = data.get('username')
         old_password = data.get('old_password')
@@ -339,9 +341,28 @@ def api_change_password():
         result = auth_manager.change_password(username, old_password, new_password)
 
         if result.get('success'):
-            # Clear the session after password change
-            session.clear()
             logger.info(f"User {username} changed password successfully")
+
+            # Auto-login after password change
+            from models import User as UserModel
+            user_obj = UserModel.query.filter_by(username=username).first()
+            if user_obj:
+                session['username'] = user_obj.username
+                session['role'] = user_obj.role
+                session['auth_provider'] = 'local'
+                session['session_version'] = user_obj.session_version  # Important: use new version
+
+                # Set session timestamps
+                session_policy = get_session_policy()
+                now = datetime.utcnow()
+                session['login_time'] = now.isoformat()
+                session['last_activity'] = now.isoformat()
+
+                csrf_token = _ensure_csrf_token()
+                result['user'] = user_obj.to_dict()
+                result['csrf_token'] = csrf_token
+                result['auto_login'] = True
+                logger.info(f"User {username} auto-logged in after password change")
 
         return jsonify(result)
     except Exception as e:
